@@ -1,0 +1,22 @@
+# Cloudflare Pages redirects for GNUS DAO SPA routing
+# This file handles client-side routing for the Next.js static export
+
+# API routes redirect (if any future API endpoints are needed)
+/api/* /api/index.html 200
+
+# Governance routes
+/governance /proposals 301
+/vote /proposals 301
+/voting /proposals 301
+
+# Proposal detail pages
+/proposals/* /proposals/[id] 200
+
+# Treasury routes
+/treasury/* /treasury 200
+
+# Analytics routes  
+/analytics/* /analytics 200
+
+# Catch-all for SPA routing - must be last
+/* /index.html 200

@@ -38,10 +38,11 @@ jobs:
         run: yarn test:ci
 
       - name: Build for Cloudflare
-        run: yarn build:cloudflare
-        env:
-          NODE_ENV: production
-          STATIC_EXPORT: true
+        run: |
+          export NODE_ENV=production
+          export STATIC_EXPORT=true
+          yarn build
+          ls -la out/
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1

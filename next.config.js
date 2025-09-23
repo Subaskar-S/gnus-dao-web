@@ -72,40 +72,42 @@ const nextConfig = {
     minimumCacheTTL: 60,
   },
 
-  // Enhanced security headers
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'none';",
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
-        ],
-      },
-    ];
-  },
+  // Enhanced security headers (disabled for static export)
+  ...(!(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true') && {
+    async headers() {
+      return [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'X-Frame-Options',
+              value: 'DENY',
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff',
+            },
+            {
+              key: 'X-XSS-Protection',
+              value: '1; mode=block',
+            },
+            {
+              key: 'Referrer-Policy',
+              value: 'strict-origin-when-cross-origin',
+            },
+            {
+              key: 'Content-Security-Policy',
+              value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'none';",
+            },
+            {
+              key: 'Permissions-Policy',
+              value: 'camera=(), microphone=(), geolocation=()',
+            },
+          ],
+        },
+      ];
+    },
+  }),
 
   // Simplified webpack configuration for Web3 compatibility
   webpack: (config, { isServer }) => {
@@ -196,26 +198,28 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // SEO-friendly redirects
-  async redirects() {
-    return [
-      {
-        source: '/governance',
-        destination: '/dao/proposals',
-        permanent: true,
-      },
-      {
-        source: '/vote',
-        destination: '/dao/proposals',
-        permanent: true,
-      },
-      {
-        source: '/voting',
-        destination: '/dao/proposals',
-        permanent: true,
-      },
-    ];
-  },
+  // SEO-friendly redirects (disabled for static export)
+  ...(!(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true') && {
+    async redirects() {
+      return [
+        {
+          source: '/governance',
+          destination: '/dao/proposals',
+          permanent: true,
+        },
+        {
+          source: '/vote',
+          destination: '/dao/proposals',
+          permanent: true,
+        },
+        {
+          source: '/voting',
+          destination: '/dao/proposals',
+          permanent: true,
+        },
+      ];
+    },
+  }),
 };
 
 module.exports = nextConfig;

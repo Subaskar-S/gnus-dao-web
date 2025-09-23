@@ -72,8 +72,8 @@ export function GlobalErrorHandler() {
     }
 
     // Add event listeners with throttling
-    let clickTimeout: NodeJS.Timeout
-    let keyTimeout: NodeJS.Timeout
+    let clickTimeout: ReturnType<typeof setTimeout>
+    let keyTimeout: ReturnType<typeof setTimeout>
 
     const throttledClick = (event: MouseEvent) => {
       clearTimeout(clickTimeout)

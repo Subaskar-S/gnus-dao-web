@@ -46,7 +46,7 @@ export const initializeWeb3 = createAsyncThunk(
 
 export const sendTransaction = createAsyncThunk(
   'web3/sendTransaction',
-  async (transaction: ethers.TransactionRequest, { getState, rejectWithValue }) => {
+  async (_transaction: ethers.TransactionRequest, { getState, rejectWithValue }) => {
     const state = getState() as { web3: Web3SliceState }
     const { signer } = state.web3
     
@@ -55,7 +55,7 @@ export const sendTransaction = createAsyncThunk(
     }
     
     try {
-      const txResponse = await signer.sendTransaction(transaction)
+      const txResponse = await signer.sendTransaction(_transaction)
       return {
         hash: txResponse.hash,
         from: txResponse.from,
@@ -72,7 +72,7 @@ export const sendTransaction = createAsyncThunk(
 
 export const estimateGas = createAsyncThunk(
   'web3/estimateGas',
-  async (transaction: ethers.TransactionRequest, { getState, rejectWithValue }) => {
+  async (_transaction: ethers.TransactionRequest, { getState, rejectWithValue }) => {
     const state = getState() as { web3: Web3SliceState }
     const { provider } = state.web3
     
@@ -81,7 +81,7 @@ export const estimateGas = createAsyncThunk(
     }
     
     try {
-      const gasEstimate = await provider.estimateGas(transaction)
+      const gasEstimate = await provider.estimateGas(_transaction)
       return gasEstimate.toString()
     } catch (error: any) {
       return rejectWithValue(error.message || 'Gas estimation failed')
@@ -91,7 +91,7 @@ export const estimateGas = createAsyncThunk(
 
 export const getBalance = createAsyncThunk(
   'web3/getBalance',
-  async (address: string, { getState, rejectWithValue }) => {
+  async (_address: string, { getState, rejectWithValue }) => {
     const state = getState() as { web3: Web3SliceState }
     const { provider } = state.web3
     
@@ -100,7 +100,7 @@ export const getBalance = createAsyncThunk(
     }
     
     try {
-      const balance = await provider.getBalance(address)
+      const balance = await provider.getBalance(_address)
       return ethers.formatEther(balance)
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to get balance')

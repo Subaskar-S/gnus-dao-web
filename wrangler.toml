@@ -4,19 +4,20 @@ compatibility_date = "2024-01-01"
 
 [env.production]
 # Production environment configuration
-vars = { NODE_ENV = "production" }
+vars = {
+  NODE_ENV = "production",
+  STATIC_EXPORT = "true",
+  NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
+}
 
 [env.preview]
-# Preview environment configuration  
+# Preview environment configuration
 vars = { NODE_ENV = "development" }
-
-# Build configuration
-[build]
-command = "yarn build:cloudflare"
-destination = "out"
 
 # Pages configuration
 [pages]
+pages_build_output_dir = "out"
+build_command = "yarn build"
 # Custom domains (configure in Cloudflare dashboard)
 # custom_domains = ["dao.gnus.ai"]
 

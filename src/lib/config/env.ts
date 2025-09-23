@@ -1,23 +1,39 @@
 import { z } from 'zod'
 
 /**
+ * Check if we're in static export mode (build time)
+ */
+const isStaticExport = process.env.STATIC_EXPORT === 'true' || process.env.NODE_ENV === 'production'
+
+/**
  * Environment variable validation schema
  * Ensures all required environment variables are present and valid
+ * More lenient during static export builds
  */
 const envSchema = z.object({
   // WalletConnect Configuration
-  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1, 'WalletConnect Project ID is required'),
-  
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: isStaticExport
+    ? z.string().optional().default('placeholder')
+    : z.string().min(1, 'WalletConnect Project ID is required'),
+
   // Application Configuration
   NEXT_PUBLIC_APP_NAME: z.string().default('GNUS DAO'),
   NEXT_PUBLIC_APP_URL: z.string().url('Invalid app URL').default('https://dao.gnus.ai'),
   NEXT_PUBLIC_APP_VERSION: z.string().default('1.0.0'),
-  
-  // RPC URLs - Primary endpoints
-  NEXT_PUBLIC_ETHEREUM_RPC_URL: z.string().url('Invalid Ethereum RPC URL'),
-  NEXT_PUBLIC_BASE_RPC_URL: z.string().url('Invalid Base RPC URL'),
-  NEXT_PUBLIC_POLYGON_RPC_URL: z.string().url('Invalid Polygon RPC URL'),
-  NEXT_PUBLIC_SKALE_RPC_URL: z.string().url('Invalid SKALE RPC URL'),
+
+  // RPC URLs - Primary endpoints (optional during static export)
+  NEXT_PUBLIC_ETHEREUM_RPC_URL: isStaticExport
+    ? z.string().optional().default('https://eth.llamarpc.com')
+    : z.string().url('Invalid Ethereum RPC URL'),
+  NEXT_PUBLIC_BASE_RPC_URL: isStaticExport
+    ? z.string().optional().default('https://mainnet.base.org')
+    : z.string().url('Invalid Base RPC URL'),
+  NEXT_PUBLIC_POLYGON_RPC_URL: isStaticExport
+    ? z.string().optional().default('https://polygon-rpc.com')
+    : z.string().url('Invalid Polygon RPC URL'),
+  NEXT_PUBLIC_SKALE_RPC_URL: isStaticExport
+    ? z.string().optional().default('https://mainnet.skalenodes.com/v1/elated-tan-skat')
+    : z.string().url('Invalid SKALE RPC URL'),
   
   // RPC URLs - Backup endpoints (optional)
   NEXT_PUBLIC_ETHEREUM_RPC_URL_BACKUP: z.string().url().optional(),

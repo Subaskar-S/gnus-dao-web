@@ -10,6 +10,12 @@ on:
       - main
       - master
 
+permissions:
+  contents: read
+  deployments: write
+  statuses: write
+  checks: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

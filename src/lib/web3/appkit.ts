@@ -7,8 +7,18 @@ import { getEnv } from '@/lib/config/env'
 const getProjectId = () => {
   try {
     const env = getEnv()
-    return env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+    const projectId = env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+
+    // Check for placeholder values that indicate missing configuration
+    if (!projectId || projectId === 'placeholder' || projectId === 'build-placeholder') {
+      throw new Error('WalletConnect Project ID is not configured. Please add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to your environment variables.')
+    }
+
+    return projectId
   } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('WalletConnect project ID is not configured. Please check your environment variables.')
   }
 }
@@ -33,9 +43,15 @@ export async function initializeWalletConnect() {
     return null
   }
 
-  // Get validated project ID
-  const projectId = getProjectId()
-  debug('Using project ID:', projectId)
+  // Get validated project ID - this will throw if not configured
+  let projectId: string
+  try {
+    projectId = getProjectId()
+    debug('Using project ID:', projectId)
+  } catch (error) {
+    debug('Project ID validation failed:', error)
+    throw error
+  }
 
   // Return existing instance if already initialized and connected
   if (walletConnectProvider && isInitialized && walletConnectProvider.connected) {

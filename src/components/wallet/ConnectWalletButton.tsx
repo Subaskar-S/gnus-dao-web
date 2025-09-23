@@ -6,6 +6,7 @@ import { Wallet, ArrowRight } from 'lucide-react'
 import { useWeb3Store } from '@/lib/web3/reduxProvider'
 import { getAvailableConnectors } from '@/lib/web3/connectors'
 import { LazyWalletSelectionModal } from './LazyWalletSelectionModal'
+import { WalletConfigError } from '@/components/error/WalletConfigError'
 import { WalletConnector } from '@/lib/web3/types'
 
 interface ConnectWalletButtonProps {
@@ -25,6 +26,7 @@ export function ConnectWalletButton({
 }: ConnectWalletButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [connectingWallet, setConnectingWallet] = useState<string>()
+  const [configError, setConfigError] = useState<string | null>(null)
   const { wallet, connect } = useWeb3Store()
   const connectors = getAvailableConnectors()
 
@@ -39,6 +41,7 @@ export function ConnectWalletButton({
 
   const handleSelectWallet = async (connector: WalletConnector) => {
     setConnectingWallet(connector.id)
+    setConfigError(null)
 
     try {
       await connect(connector.id)
@@ -51,17 +54,39 @@ export function ConnectWalletButton({
         console.error('Wallet connection failed:', error)
       }
       const message = error instanceof Error ? error.message : 'Failed to connect wallet'
-      // Only log errors in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error(message)
+
+      // Check if it's a configuration error
+      if (message.includes('WalletConnect') || message.includes('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID')) {
+        setConfigError(message)
+        handleCloseModal()
+      } else {
+        // Only log non-config errors in development
+        if (process.env.NODE_ENV === 'development') {
+          console.error(message)
+        }
       }
       setConnectingWallet(undefined)
     }
   }
 
+  const handleRetryConnection = () => {
+    setConfigError(null)
+    setIsModalOpen(true)
+  }
+
   // Don't show if already connected
   if (wallet.isConnected) {
     return null
+  }
+
+  // Show configuration error if present
+  if (configError) {
+    return (
+      <WalletConfigError
+        error={configError}
+        onRetry={handleRetryConnection}
+      />
+    )
   }
 
   return (

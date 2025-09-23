@@ -4,15 +4,15 @@ compatibility_date = "2024-01-01"
 
 [env.production]
 # Production environment configuration
-vars = {
-  NODE_ENV = "production",
-  STATIC_EXPORT = "true",
-  NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
-}
+[env.production.vars]
+NODE_ENV = "production"
+STATIC_EXPORT = "true"
+NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
 
 [env.preview]
 # Preview environment configuration
-vars = { NODE_ENV = "development" }
+[env.preview.vars]
+NODE_ENV = "development"
 
 # Pages configuration
 [pages]

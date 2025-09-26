@@ -1,21 +1,25 @@
 'use client'
 
 import React, { useState } from 'react'
-import { 
-  Plus, 
-  FileText, 
-  Calendar, 
-  Users, 
+import {
+  Plus,
+  FileText,
+  Calendar,
+  Users,
   DollarSign,
   Code,
   Settings,
   AlertTriangle,
-  Info
+  Info,
+  Upload,
+  X,
+  Link
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useWeb3Store } from '@/lib/web3/reduxProvider'
 import { gnusDaoService } from '@/lib/contracts/gnusDaoService'
 import { toast } from 'react-hot-toast'
+import { ipfsService, type ProposalMetadata, type IPFSUploadResult } from '@/lib/ipfs'
 
 interface CreateProposalModalProps {
   onClose: () => void
@@ -32,12 +36,20 @@ interface ProposalAction {
 export function CreateProposalModal({ onClose, onProposalCreated }: CreateProposalModalProps) {
   const { wallet, tokenBalance } = useWeb3Store()
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<'basic' | 'actions' | 'review'>('basic')
-  
+  const [step, setStep] = useState<'basic' | 'actions' | 'attachments' | 'review'>('basic')
+
   // Basic proposal info
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState<'treasury' | 'protocol' | 'governance' | 'community'>('treasury')
+  const [discussionUrl, setDiscussionUrl] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+
+  // IPFS attachments
+  const [attachments, setAttachments] = useState<IPFSUploadResult[]>([])
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [uploading, setUploading] = useState(false)
   
   // Proposal actions
   const [actions, setActions] = useState<ProposalAction[]>([
@@ -87,6 +99,62 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
     setActions(newActions)
   }
 
+  // Tag management
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()])
+      setTagInput('')
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove))
+  }
+
+  // File upload handling
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const uploadPromises = Array.from(files).map(file =>
+        ipfsService.uploadFile(file, {
+          pin: true,
+          metadata: {
+            name: `Proposal attachment: ${file.name}`,
+            keyvalues: {
+              type: 'proposal-attachment',
+              proposalTitle: title,
+              uploadedBy: wallet.address
+            }
+          },
+          onProgress: (progress) => {
+            setUploadProgress(progress)
+          }
+        })
+      )
+
+      const results = await Promise.all(uploadPromises)
+      setAttachments([...attachments, ...results])
+      toast.success(`${results.length} file(s) uploaded successfully`)
+    } catch (error) {
+      console.error('File upload failed:', error)
+      toast.error('Failed to upload files')
+    } finally {
+      setUploading(false)
+      setUploadProgress(0)
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) {
       toast.error('Please fill in all required fields')
@@ -94,7 +162,7 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
     }
 
     // Validate actions
-    const validActions = actions.filter(action => 
+    const validActions = actions.filter(action =>
       action.target.trim() !== '' || action.signature.trim() !== ''
     )
 
@@ -106,12 +174,44 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
     try {
       setLoading(true)
 
+      // Create proposal metadata for IPFS
+      const proposalMetadata: ProposalMetadata = {
+        title,
+        description,
+        category,
+        author: wallet.address || '',
+        created: Date.now(),
+        version: '1.0.0',
+        attachments,
+        tags,
+        discussionUrl: discussionUrl || undefined,
+        votingPeriod: {
+          start: Date.now(),
+          end: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days default
+        }
+      }
+
+      // Upload metadata to IPFS
+      let metadataHash = ''
+      try {
+        const metadataResult = await ipfsService.uploadProposalMetadata(proposalMetadata)
+        metadataHash = metadataResult.hash
+        toast.success('Proposal metadata uploaded to IPFS')
+      } catch (error) {
+        console.warn('Failed to upload metadata to IPFS:', error)
+        // Continue without IPFS metadata if upload fails
+      }
+
       // Prepare proposal data
       const targets = validActions.map(action => action.target)
       const values = validActions.map(action => action.value || '0')
       const signatures = validActions.map(action => action.signature)
       const calldatas = validActions.map(action => action.calldata || '0x')
-      const proposalDescription = `${title}\n\n${description}`
+
+      // Include IPFS hash in description if available
+      const proposalDescription = metadataHash
+        ? `${title}\n\n${description}\n\nIPFS Metadata: ${metadataHash}`
+        : `${title}\n\n${description}`
 
       const tx = await gnusDaoService.createProposal(
         targets,

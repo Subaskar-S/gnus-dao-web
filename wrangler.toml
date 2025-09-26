@@ -2,11 +2,22 @@
 name = "gnus-dao-governance"
 compatibility_date = "2024-01-01"
 
+# Global environment variables
+[vars]
+CLOUDFLARE_PAGES = "true"
+
+# KV namespace for IPFS caching
+[[kv_namespaces]]
+binding = "IPFS_CACHE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
 [env.production]
 # Production environment configuration
 [env.production.vars]
 NODE_ENV = "production"
 STATIC_EXPORT = "true"
+CLOUDFLARE_PAGES = "true"
 NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
 
 [env.preview]
@@ -17,7 +28,7 @@ NODE_ENV = "development"
 # Pages configuration
 [pages]
 pages_build_output_dir = "out"
-build_command = "yarn build"
+build_command = "yarn build:cloudflare"
 # Custom domains (configure in Cloudflare dashboard)
 # custom_domains = ["dao.gnus.ai"]
 
@@ -29,5 +40,9 @@ build_command = "yarn build"
 # - NEXT_PUBLIC_POLYGON_RPC_URL
 # - NEXT_PUBLIC_SKALE_RPC_URL
 # - NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS (for testnet)
+# - NEXT_PUBLIC_PINATA_API_KEY
+# - NEXT_PUBLIC_PINATA_SECRET_KEY
+# - NEXT_PUBLIC_PINATA_JWT
+# - PINATA_JWT (for worker functions)
 
 # Security headers are configured in public/_headers file

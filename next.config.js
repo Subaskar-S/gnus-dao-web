@@ -29,6 +29,8 @@ const nextConfig = {
     // Disabled optimizeCss due to critters dependency issue
     // optimizeCss: true,
     webVitalsAttribution: ['CLS', 'LCP'],
+    // Enable Edge Runtime for Cloudflare Pages compatibility (commented out due to compatibility issues)
+    // runtime: process.env.CLOUDFLARE_PAGES === 'true' ? 'edge' : undefined,
   },
 
   // Compiler optimizations
@@ -53,6 +55,21 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'gateway.pinata.cloud',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cloudflare-ipfs.com',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dweb.link',
+        pathname: '/ipfs/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ipfs.infura.io',
         pathname: '/ipfs/**',
       },
       {
@@ -137,6 +154,9 @@ const nextConfig = {
         'node:util': false,
         'node:url': false,
         'node:buffer': false,
+        // IPFS-specific polyfills
+        'ipfs-http-client': false,
+        'multiformats': false,
       };
     }
 

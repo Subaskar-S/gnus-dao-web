@@ -46,7 +46,7 @@ export function Web3ReduxProvider({ children }: Web3ReduxProviderProps) {
       ;(window as any).ethereum.on('disconnect', handleDisconnectEvent)
 
       return () => {
-        ;(window as any).ethereum.removeListener('accountsChanged', handleAccountsChangedEvent)
+        (window as any).ethereum.removeListener('accountsChanged', handleAccountsChangedEvent)
         ;(window as any).ethereum.removeListener('chainChanged', handleChainChangedEvent)
         ;(window as any).ethereum.removeListener('disconnect', handleDisconnectEvent)
       }

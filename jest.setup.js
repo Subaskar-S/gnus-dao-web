@@ -249,6 +249,51 @@ Object.defineProperty(global, 'crypto', {
   },
 })
 
+// Mock IPFS dependencies
+jest.mock('@pinata/sdk', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    pinFileToIPFS: jest.fn().mockResolvedValue({
+      IpfsHash: 'QmTestHash123',
+      PinSize: 1024,
+      Timestamp: new Date().toISOString(),
+    }),
+    pinJSONToIPFS: jest.fn().mockResolvedValue({
+      IpfsHash: 'QmTestJSONHash123',
+      PinSize: 512,
+      Timestamp: new Date().toISOString(),
+    }),
+    unpin: jest.fn().mockResolvedValue({}),
+    testAuthentication: jest.fn().mockResolvedValue({
+      authenticated: true,
+    }),
+  })),
+}))
+
+jest.mock('ipfs-http-client', () => ({
+  create: jest.fn().mockReturnValue({
+    add: jest.fn().mockResolvedValue([{
+      path: 'test-file.txt',
+      hash: 'QmTestHash123',
+      size: 1024,
+    }]),
+    cat: jest.fn().mockResolvedValue(Buffer.from('test content')),
+    pin: {
+      add: jest.fn().mockResolvedValue([{
+        hash: 'QmTestHash123',
+      }]),
+    },
+  }),
+}))
+
+jest.mock('multiformats/cid', () => ({
+  CID: {
+    parse: jest.fn().mockReturnValue({
+      toString: () => 'QmTestHash123',
+    }),
+  },
+}))
+
 
 
 // Clean up after each test

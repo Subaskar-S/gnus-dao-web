@@ -75,7 +75,7 @@ export const disconnectWallet = createAsyncThunk(
     
     // Remove event listeners
     if ((window as any).ethereum) {
-      ;(window as any).ethereum.removeAllListeners('accountsChanged')
+      (window as any).ethereum.removeAllListeners('accountsChanged')
       ;(window as any).ethereum.removeAllListeners('chainChanged')
       ;(window as any).ethereum.removeAllListeners('disconnect')
     }

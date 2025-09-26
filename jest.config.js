@@ -21,14 +21,14 @@ const customJestConfig = {
     '!src/app/layout.tsx',
     '!src/app/globals.css',
   ],
-  // coverageThreshold: {
-  //   global: {
-  //     branches: 5,
-  //     functions: 5,
-  //     lines: 5,
-  //     statements: 5,
-  //   },
-  // },
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60,
+    },
+  },
   testMatch: [
     '<rootDir>/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
@@ -43,7 +43,7 @@ const customJestConfig = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   transformIgnorePatterns: [
-    '/node_modules/',
+    '/node_modules/(?!(@pinata|ipfs-http-client|multiformats)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],

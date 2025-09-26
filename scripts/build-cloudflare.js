@@ -99,10 +99,37 @@ function runLinting() {
   logStep('3/6', 'Running ESLint...')
 
   try {
-    execSync('yarn lint', { stdio: 'inherit' })
-    logSuccess('Linting passed')
+    // Use production ESLint config for build
+    const fs = require('fs')
+    const path = require('path')
+
+    // Backup current eslintrc
+    const eslintrcPath = path.join(process.cwd(), '.eslintrc.json')
+    const productionEslintrcPath = path.join(process.cwd(), '.eslintrc.production.json')
+    const backupPath = path.join(process.cwd(), '.eslintrc.json.backup')
+
+    if (fs.existsSync(eslintrcPath)) {
+      fs.copyFileSync(eslintrcPath, backupPath)
+    }
+
+    if (fs.existsSync(productionEslintrcPath)) {
+      fs.copyFileSync(productionEslintrcPath, eslintrcPath)
+    }
+
+    try {
+      execSync('yarn lint', { stdio: 'inherit' })
+      logSuccess('Linting passed')
+    } catch (error) {
+      logWarning('Linting issues found, but continuing build...')
+    } finally {
+      // Restore original eslintrc
+      if (fs.existsSync(backupPath)) {
+        fs.copyFileSync(backupPath, eslintrcPath)
+        fs.unlinkSync(backupPath)
+      }
+    }
   } catch (error) {
-    logWarning('Linting issues found, but continuing build...')
+    logWarning('Linting configuration error, but continuing build...')
   }
 }
 

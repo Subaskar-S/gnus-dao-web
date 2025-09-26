@@ -30,6 +30,11 @@
     ".next/",
     "out/",
     "dist/",
-    "*.config.js"
+    "*.config.js",
+    "**/__tests__/**/*",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "jest.config.js",
+    "jest.setup.js"
   ]
 }

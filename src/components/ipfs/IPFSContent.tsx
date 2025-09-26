@@ -80,7 +80,6 @@ export function IPFSContent({
         isJSON
       })
     } catch (error) {
-      console.error('Failed to load IPFS content:', error)
       setContentState(prev => ({
         ...prev,
         loading: false,

@@ -116,8 +116,6 @@ export function FileUpload({
           ))
           
         } catch (error) {
-          console.error(`Failed to upload ${file.name}:`, error)
-          
           // Update file status to error
           setUploadingFiles(prev => prev.map((uf, index) => 
             index === i ? { 
@@ -135,7 +133,6 @@ export function FileUpload({
       }
       
     } catch (error) {
-      console.error('Upload process failed:', error)
       toast.error('Upload process failed')
     }
   }

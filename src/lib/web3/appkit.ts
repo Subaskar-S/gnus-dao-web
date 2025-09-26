@@ -30,8 +30,7 @@ let isInitialized = false
 // Debug logging - only in development
 const debug = (message: string, ...args: any[]) => {
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[WalletConnect Debug] ${message}`, ...args)
-  }
+    }
 }
 
 /**
@@ -240,7 +239,6 @@ export async function switchWalletConnectNetwork(chainId: number) {
       params: [{ chainId: `0x${chainId.toString(16)}` }],
     })
   } catch (error) {
-    console.error('Failed to switch network:', error)
     throw error
   }
 }
@@ -256,7 +254,6 @@ export async function disconnectWalletConnect() {
     walletConnectProvider = null
     isInitialized = false
   } catch (error) {
-    console.error('Failed to disconnect:', error)
     throw error
   }
 }

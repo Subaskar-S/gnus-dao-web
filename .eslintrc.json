@@ -12,17 +12,39 @@
     "no-redeclare": "error",
     "react-hooks/exhaustive-deps": "warn",
     "react/jsx-no-target-blank": "warn",
-    "react/no-unescaped-entities": "off"
+    "react/no-unescaped-entities": "off",
+    "jsx-a11y/alt-text": "warn",
+    "@next/next/no-img-element": "warn"
   },
   "env": {
     "browser": true,
     "es2021": true,
-    "node": true
+    "node": true,
+    "jest": true
   },
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**/*", "**/*.test.*", "**/*.spec.*"],
+      "env": {
+        "jest": true
+      },
+      "globals": {
+        "jest": "readonly",
+        "describe": "readonly",
+        "it": "readonly",
+        "test": "readonly",
+        "expect": "readonly",
+        "beforeEach": "readonly",
+        "afterEach": "readonly",
+        "beforeAll": "readonly",
+        "afterAll": "readonly"
+      }
+    }
+  ],
   "ignorePatterns": [
     "node_modules/",
     ".next/",

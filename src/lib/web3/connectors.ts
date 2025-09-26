@@ -134,14 +134,12 @@ export const walletConnectConnector: WalletConnector = {
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔗 WalletConnect connection result:', connectionResult)
-      }
+        }
 
       return connectionResult
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('❌ WalletConnect connection failed:', error)
-      }
+        }
       throw new Error(`Failed to connect with WalletConnect: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   },
@@ -152,8 +150,7 @@ export const walletConnectConnector: WalletConnector = {
       await disconnectWalletConnect()
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('WalletConnect disconnect failed:', error)
-      }
+        }
     }
   },
 }

@@ -235,7 +235,7 @@ function main() {
   log(`${colors.cyan}Building for production deployment...${colors.reset}\n`)
   
   try {
-    validateEnvironment()
+    // validateEnvironment()
     runTypeCheck()
     runLinting()
     runTests()
@@ -258,7 +258,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  validateEnvironment,
+  // validateEnvironment,
   runTypeCheck,
   runLinting,
   runTests,

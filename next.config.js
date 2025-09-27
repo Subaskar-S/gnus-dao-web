@@ -1,12 +1,25 @@
 /** @type {import('next').NextConfig} */
+const { setupDevPlatform } = require('@cloudflare/next-on-pages/next-dev')
+
+// Setup Cloudflare development platform
+if (process.env.NODE_ENV === 'development') {
+  setupDevPlatform()
+}
+
 const nextConfig = {
   // Core Next.js optimizations
   reactStrictMode: true,
   swcMinify: true,
   poweredByHeader: false,
 
-  // Dynamic configuration based on environment
-  ...(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true' && {
+  // Cloudflare Pages configuration
+  ...(process.env.CLOUDFLARE_PAGES === 'true' && {
+    // Additional configuration for Cloudflare Pages
+    // Edge Runtime is handled by the adapter
+  }),
+
+  // Fallback to static export for other deployments
+  ...(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true' && process.env.CLOUDFLARE_PAGES !== 'true' && {
     output: 'export',
     trailingSlash: true,
     distDir: 'out',
@@ -29,8 +42,7 @@ const nextConfig = {
     // Disabled optimizeCss due to critters dependency issue
     // optimizeCss: true,
     webVitalsAttribution: ['CLS', 'LCP'],
-    // Enable Edge Runtime for Cloudflare Pages compatibility (commented out due to compatibility issues)
-    // runtime: process.env.CLOUDFLARE_PAGES === 'true' ? 'edge' : undefined,
+    // Edge Runtime compatibility handled by @cloudflare/next-on-pages adapter
   },
 
   // Compiler optimizations

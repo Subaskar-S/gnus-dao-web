@@ -270,21 +270,8 @@ jest.mock('@pinata/sdk', () => ({
   })),
 }))
 
-jest.mock('ipfs-http-client', () => ({
-  create: jest.fn().mockReturnValue({
-    add: jest.fn().mockResolvedValue([{
-      path: 'test-file.txt',
-      hash: 'QmTestHash123',
-      size: 1024,
-    }]),
-    cat: jest.fn().mockResolvedValue(Buffer.from('test content')),
-    pin: {
-      add: jest.fn().mockResolvedValue([{
-        hash: 'QmTestHash123',
-      }]),
-    },
-  }),
-}))
+// IPFS HTTP client is not used in the current implementation
+// Using Pinata API directly instead
 
 jest.mock('multiformats/cid', () => ({
   CID: {

@@ -8,6 +8,7 @@
     "build": "next build",
     "build:static": "next build && next export",
     "build:cloudflare": "node scripts/build-cloudflare.js",
+    "build:cloudflare-adapter": "node scripts/build-cloudflare-adapter.js",
     "start": "next start --port 3000",
     "preview": "yarn build && yarn start",
     "lint": "next lint",
@@ -23,6 +24,8 @@
     "test:e2e:ui": "playwright test --ui",
     "validate": "yarn type-check && yarn lint && yarn test:ci",
     "fix-lint": "node scripts/fix-linting-issues.js",
+    "preview:cloudflare": "wrangler pages dev .vercel/output/static --compatibility-date=2024-01-01",
+    "deploy:cloudflare": "wrangler pages deploy .vercel/output/static",
     "validate-deployment": "node scripts/validate-deployment.js",
     "deploy:prepare": "yarn fix-lint && yarn build:cloudflare && yarn validate-deployment",
     "docker:build": "docker build -t gnus-dao-governance .",
@@ -109,7 +112,7 @@
     "tailwindcss": "^3.4.9",
     "typescript": "^5.5.4",
     "webpack-bundle-analyzer": "^4.10.1",
-    "wrangler": "^4.40.0"
+    "wrangler": "^4.40.2"
   },
   "engines": {
     "node": ">=18.0.0",

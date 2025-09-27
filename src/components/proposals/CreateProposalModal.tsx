@@ -20,6 +20,7 @@ import { useWeb3Store } from '@/lib/web3/reduxProvider'
 import { gnusDaoService } from '@/lib/contracts/gnusDaoService'
 import { toast } from 'react-hot-toast'
 import { ipfsService, type ProposalMetadata, type IPFSUploadResult } from '@/lib/ipfs'
+import { FileUpload } from '@/components/ipfs/FileUpload'
 
 interface CreateProposalModalProps {
   onClose: () => void
@@ -401,6 +402,70 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
     </div>
   )
 
+  const renderAttachmentsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium mb-2">File Attachments</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Upload supporting documents, images, or other files to IPFS. These will be permanently stored and linked to your proposal.
+        </p>
+      </div>
+
+      <FileUpload
+        onUploadComplete={(results) => {
+          setAttachments([...attachments, ...results])
+          toast.success(`${results.length} file(s) uploaded successfully`)
+        }}
+        onUploadStart={() => setUploading(true)}
+        onUploadProgress={setUploadProgress}
+        multiple={true}
+        maxFiles={5}
+        disabled={uploading}
+        className="mb-4"
+      />
+
+      {/* Current Attachments */}
+      {attachments.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium">Uploaded Files ({attachments.length})</h4>
+          <div className="space-y-2">
+            {attachments.map((attachment, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border border-input rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{attachment.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {attachment.size ? `${Math.round(attachment.size / 1024)} KB` : 'Unknown size'} •
+                      IPFS: {attachment.hash.slice(0, 8)}...{attachment.hash.slice(-6)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAttachment(index)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+            <span className="text-sm">Uploading to IPFS... {Math.round(uploadProgress)}%</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   const renderReviewStep = () => (
     <div className="space-y-6">
       <div className="bg-card border rounded-lg p-4">
@@ -442,6 +507,29 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
         )}
       </div>
 
+      <div className="bg-card border rounded-lg p-4">
+        <h4 className="font-medium mb-3">Attachments ({attachments.length})</h4>
+        {attachments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No attachments</p>
+        ) : (
+          <div className="space-y-2">
+            {attachments.map((attachment, index) => (
+              <div key={index} className="text-sm border border-input rounded p-3">
+                <div className="font-medium mb-1">{attachment.name}</div>
+                <div className="text-xs text-muted-foreground font-mono">
+                  IPFS: {attachment.hash}
+                </div>
+                {attachment.size && (
+                  <div className="text-xs text-muted-foreground">
+                    Size: {Math.round(attachment.size / 1024)} KB
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
         <div className="flex items-start">
           <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" />
@@ -469,7 +557,7 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
               Create Proposal
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Step {step === 'basic' ? '1' : step === 'actions' ? '2' : '3'} of 3
+              Step {step === 'basic' ? '1' : step === 'actions' ? '2' : step === 'attachments' ? '3' : '4'} of 4
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -497,11 +585,20 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
             <span className="ml-2 text-sm font-medium">Actions</span>
           </div>
           <div className="flex-1 h-px bg-border mx-4" />
+          <div className={`flex items-center ${step === 'attachments' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              step === 'attachments' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+            }`}>
+              3
+            </div>
+            <span className="ml-2 text-sm font-medium">Attachments</span>
+          </div>
+          <div className="flex-1 h-px bg-border mx-4" />
           <div className={`flex items-center ${step === 'review' ? 'text-primary' : 'text-muted-foreground'}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
               step === 'review' ? 'bg-primary text-primary-foreground' : 'bg-muted'
             }`}>
-              3
+              4
             </div>
             <span className="ml-2 text-sm font-medium">Review</span>
           </div>
@@ -510,6 +607,7 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
         {/* Step Content */}
         {step === 'basic' && renderBasicStep()}
         {step === 'actions' && renderActionsStep()}
+        {step === 'attachments' && renderAttachmentsStep()}
         {step === 'review' && renderReviewStep()}
 
         {/* Navigation */}
@@ -518,18 +616,20 @@ export function CreateProposalModal({ onClose, onProposalCreated }: CreatePropos
             variant="outline"
             onClick={() => {
               if (step === 'actions') setStep('basic')
-              else if (step === 'review') setStep('actions')
+              else if (step === 'attachments') setStep('actions')
+              else if (step === 'review') setStep('attachments')
               else onClose()
             }}
             disabled={loading}
           >
             {step === 'basic' ? 'Cancel' : 'Back'}
           </Button>
-          
+
           <Button
             onClick={() => {
               if (step === 'basic') setStep('actions')
-              else if (step === 'actions') setStep('review')
+              else if (step === 'actions') setStep('attachments')
+              else if (step === 'attachments') setStep('review')
               else handleSubmit()
             }}
             disabled={loading || (step === 'basic' && (!title.trim() || !description.trim()))}

@@ -96,7 +96,7 @@ export async function initializeWalletConnect() {
       metadata: {
         name: 'GNUS DAO Governance',
         description: 'Decentralized governance platform for GNUS DAO community',
-        url: 'https://gnus-dao.org',
+        url: 'https://gnus-dao-web.pages.dev/',
         icons: ['/logo.png']
       }
     })

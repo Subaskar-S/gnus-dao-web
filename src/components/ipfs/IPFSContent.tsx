@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { ExternalLink, Download, Eye, AlertCircle, Loader2, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ipfsService, getIPFSUrl, isValidIPFSHash, formatFileSize } from '@/lib/ipfs'
@@ -152,15 +153,20 @@ export function IPFSContent({
     if (contentState.isImage) {
       return (
         <div className="p-4">
-          <img
-            src={getIPFSUrl(hash)}
-            alt={name || 'IPFS content'}
-            className="max-w-full h-auto rounded-lg"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.style.display = 'none'
-            }}
-          />
+          <div className="relative max-w-full">
+            <Image
+              src={getIPFSUrl(hash)}
+              alt={name || 'IPFS content'}
+              width={800}
+              height={600}
+              className="max-w-full h-auto rounded-lg"
+              style={{ objectFit: 'contain' }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
+          </div>
         </div>
       )
     }

@@ -6,27 +6,43 @@ if (process.env.NODE_ENV === 'development') {
   setupDevPlatform()
 }
 
+// Environment detection
+const isCloudflarePages = process.env.CLOUDFLARE_PAGES === 'true'
+const isProduction = process.env.NODE_ENV === 'production'
+const isStaticExport = process.env.STATIC_EXPORT === 'true'
+const useAdapter = process.env.USE_CLOUDFLARE_ADAPTER === 'true'
+
 const nextConfig = {
   // Core Next.js optimizations
   reactStrictMode: true,
   swcMinify: true,
   poweredByHeader: false,
 
-  // Cloudflare Pages configuration
-  ...(process.env.CLOUDFLARE_PAGES === 'true' && {
-    // Additional configuration for Cloudflare Pages
-    // Edge Runtime is handled by the adapter
+  // Enhanced compression and optimization
+  compress: true,
+  generateEtags: true,
+
+  // Cloudflare Pages configuration with adapter support
+  ...(isCloudflarePages && useAdapter && {
+    // Configuration for @cloudflare/next-on-pages adapter
+    experimental: {
+      runtime: 'edge',
+    },
   }),
 
-  // Fallback to static export for other deployments
-  ...(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true' && process.env.CLOUDFLARE_PAGES !== 'true' && {
+  // Static export configuration for standard Cloudflare Pages
+  ...(isProduction && isStaticExport && !useAdapter && {
     output: 'export',
     trailingSlash: true,
     distDir: 'out',
+    images: {
+      unoptimized: true, // Required for static export
+    },
   }),
 
-  // Performance optimizations
+  // Enhanced performance optimizations
   experimental: {
+    // Package import optimizations for better tree shaking
     optimizePackageImports: [
       '@heroicons/react',
       'react-hot-toast',
@@ -37,28 +53,68 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
       '@walletconnect/ethereum-provider',
       '@reown/appkit',
-      'ethers'
+      'ethers',
+      'framer-motion',
+      '@tanstack/react-query',
+      '@reduxjs/toolkit'
     ],
-    // Disabled optimizeCss due to critters dependency issue
-    // optimizeCss: true,
-    webVitalsAttribution: ['CLS', 'LCP'],
-    // Edge Runtime compatibility handled by @cloudflare/next-on-pages adapter
+
+    // Cloudflare-specific optimizations
+    ...(isCloudflarePages && useAdapter && {
+      runtime: 'edge',
+    }),
+
+    // Performance monitoring
+    webVitalsAttribution: ['CLS', 'LCP', 'FID', 'FCP', 'TTFB'],
+
+    // Advanced optimizations (disabled due to critters dependency)
+    // optimizeCss: !useAdapter, // Disabled for edge runtime compatibility
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+
+    // ESM handling
+    esmExternals: 'loose',
   },
 
-  // Compiler optimizations
+  // Enhanced compiler optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-    reactRemoveProperties: process.env.NODE_ENV === 'production' ? { properties: ['^data-testid$'] } : false,
+    // Production optimizations
+    removeConsole: isProduction ? {
+      exclude: ['error', 'warn'], // Keep error and warning logs
+    } : false,
+
+    // Remove test attributes and debug properties in production
+    reactRemoveProperties: isProduction ? {
+      properties: ['^data-testid$', '^data-test$', '^data-debug$']
+    } : false,
   },
 
-  // ESLint configuration
+  // Build-time optimizations
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: isProduction, // Only ignore in production builds
+    dirs: ['src'], // Limit ESLint to src directory
   },
 
-  // Image optimization with security
+  // TypeScript optimizations
+  typescript: {
+    ignoreBuildErrors: isProduction, // Only ignore in production builds
+    tsconfigPath: './tsconfig.json',
+  },
+
+  // Enhanced image optimization with Cloudflare compatibility
   images: {
+    // Disable optimization for static export, enable for adapter
+    unoptimized: isStaticExport && !useAdapter,
+
+    // Cloudflare-compatible image domains
     remotePatterns: [
+      // IPFS gateways
       {
         protocol: 'https',
         hostname: 'ipfs.io',
@@ -84,6 +140,7 @@ const nextConfig = {
         hostname: 'ipfs.infura.io',
         pathname: '/ipfs/**',
       },
+      // Project domains
       {
         protocol: 'https',
         hostname: 'gnus.ai',
@@ -94,20 +151,45 @@ const nextConfig = {
         hostname: 'geniusventures.io',
         pathname: '/**',
       },
+      // Cloudflare domains
+      {
+        protocol: 'https',
+        hostname: '*.cloudflare.com',
+        pathname: '/**',
+      },
+      // CDN domains
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
+        pathname: '/**',
+      },
     ],
-    formats: ['image/webp', 'image/avif'],
+
+    // Modern image formats with fallbacks
+    formats: ['image/avif', 'image/webp'],
+
+    // Responsive breakpoints optimized for modern devices
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
+
+    // Cloudflare-optimized caching
+    minimumCacheTTL: isCloudflarePages ? 86400 : 60, // 24 hours for Cloudflare
+
+    // Loader configuration for Cloudflare
+    ...(isCloudflarePages && !isStaticExport && {
+      loader: 'custom',
+      loaderFile: './src/lib/utils/image-loader.js',
+    }),
   },
 
-  // Enhanced security headers (disabled for static export)
-  ...(!(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true') && {
+  // Enhanced security headers (disabled for static export, handled by _headers file)
+  ...(!isStaticExport && {
     async headers() {
       return [
         {
           source: '/(.*)',
           headers: [
+            // Security headers
             {
               key: 'X-Frame-Options',
               value: 'DENY',
@@ -125,12 +207,55 @@ const nextConfig = {
               value: 'strict-origin-when-cross-origin',
             },
             {
-              key: 'Content-Security-Policy',
-              value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'none';",
+              key: 'Strict-Transport-Security',
+              value: 'max-age=31536000; includeSubDomains; preload',
             },
+            // Enhanced CSP for Web3 applications
+            {
+              key: 'Content-Security-Policy',
+              value: [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com https://registry.walletconnect.com https://explorer-api.walletconnect.com",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "img-src 'self' data: https: blob:",
+                "font-src 'self' data: https://fonts.gstatic.com",
+                "connect-src 'self' https: wss: blob:",
+                "frame-src 'none'",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "upgrade-insecure-requests"
+              ].join('; '),
+            },
+            // Permissions policy
             {
               key: 'Permissions-Policy',
-              value: 'camera=(), microphone=(), geolocation=()',
+              value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+            },
+            // Performance headers
+            {
+              key: 'X-DNS-Prefetch-Control',
+              value: 'on',
+            },
+          ],
+        },
+        // API routes security
+        {
+          source: '/api/(.*)',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'no-store, max-age=0',
+            },
+          ],
+        },
+        // Static assets caching
+        {
+          source: '/(_next/static|favicon|manifest|icon-|apple-touch-icon).*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable',
             },
           ],
         },
@@ -138,12 +263,18 @@ const nextConfig = {
     },
   }),
 
-  // Simplified webpack configuration for Web3 compatibility
+  // Enhanced webpack configuration for Cloudflare and Web3 compatibility
   webpack: (config, { isServer }) => {
-    // Handle node modules that need polyfills
+    // Cloudflare Edge Runtime compatibility
+    if (useAdapter && !isServer) {
+      config.target = 'webworker'
+    }
+
+    // Enhanced node modules polyfills for Web3
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        // Node.js built-ins
         fs: false,
         net: false,
         tls: false,
@@ -158,7 +289,10 @@ const nextConfig = {
         path: false,
         buffer: false,
         util: false,
-        // Handle Node.js built-in modules
+        events: false,
+        querystring: false,
+
+        // Node.js prefixed modules
         'node:fs': false,
         'node:path': false,
         'node:crypto': false,
@@ -166,90 +300,173 @@ const nextConfig = {
         'node:util': false,
         'node:url': false,
         'node:buffer': false,
-        // IPFS-specific polyfills
+        'node:events': false,
+        'node:querystring': false,
+
+        // Web3 and IPFS specific
         'ipfs-http-client': false,
         'multiformats': false,
+        'uint8arrays': false,
+        'it-all': false,
+        'it-map': false,
       };
     }
 
-    // Handle ESM modules
+    // Enhanced ESM and module handling
     config.experiments = {
       ...config.experiments,
       topLevelAwait: true,
+      asyncWebAssembly: true,
+      layers: true,
     }
 
-    // Handle Reown AppKit and WalletConnect dependencies
+    // Cloudflare-specific externals
     config.externals = config.externals || [];
     if (!isServer) {
       config.externals.push({
         'utf-8-validate': 'commonjs utf-8-validate',
         'bufferutil': 'commonjs bufferutil',
+        'encoding': 'commonjs encoding',
       });
     }
 
-    // Resolve alias for problematic dependencies
+    // Enhanced resolve aliases for better compatibility
     config.resolve.alias = {
       ...config.resolve.alias,
       '@walletconnect/keyvaluestorage': require.resolve('@walletconnect/keyvaluestorage'),
+      // Add more aliases for problematic packages
+      'react-native-get-random-values': false,
+      'react-native': false,
     };
 
-    // Handle specific module resolution for WalletConnect
-    config.module.rules.push({
-      test: /\.m?js$/,
-      type: 'javascript/auto',
-      resolve: {
-        fullySpecified: false,
+    // Enhanced module rules for better compatibility
+    config.module.rules.push(
+      // Handle ES modules
+      {
+        test: /\.m?js$/,
+        type: 'javascript/auto',
+        resolve: {
+          fullySpecified: false,
+        },
       },
-    });
+      // Handle SVG files
+      {
+        test: /\.svg$/,
+        use: ['@svgr/webpack'],
+      },
+      // Handle WASM files for Cloudflare
+      {
+        test: /\.wasm$/,
+        type: 'webassembly/async',
+      }
+    );
 
-    // Add a custom plugin to handle node: scheme imports
-    config.plugins.push({
-      apply: (compiler) => {
-        compiler.hooks.normalModuleFactory.tap('NodeSchemePlugin', (factory) => {
-          factory.hooks.beforeResolve.tap('NodeSchemePlugin', (resolveData) => {
-            if (resolveData.request && resolveData.request.startsWith('node:')) {
-              const moduleName = resolveData.request.slice(5); // Remove 'node:' prefix
-              resolveData.request = moduleName;
-            }
+    // Enhanced plugins for Cloudflare compatibility
+    config.plugins.push(
+      // Handle node: scheme imports
+      {
+        apply: (compiler) => {
+          compiler.hooks.normalModuleFactory.tap('NodeSchemePlugin', (factory) => {
+            factory.hooks.beforeResolve.tap('NodeSchemePlugin', (resolveData) => {
+              if (resolveData.request && resolveData.request.startsWith('node:')) {
+                const moduleName = resolveData.request.slice(5);
+                resolveData.request = moduleName;
+              }
+            });
           });
-        });
-      },
-    });
+        },
+      }
+    );
 
-    // Ignore specific warnings from dependencies
+    // Enhanced warning filters
     config.ignoreWarnings = [
       /Failed to parse source map/,
       /Critical dependency: the request of a dependency is an expression/,
+      /Module not found: Error: Can't resolve 'encoding'/,
+      /Module not found: Error: Can't resolve 'pino-pretty'/,
+      /the request of a dependency is an expression/,
     ];
+
+    // Optimization for Cloudflare
+    if (isCloudflarePages) {
+      config.optimization = {
+        ...config.optimization,
+        sideEffects: false,
+        usedExports: true,
+        providedExports: true,
+      };
+    }
 
     return config;
   },
 
-  // TypeScript configuration
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
-  // SEO-friendly redirects (disabled for static export)
-  ...(!(process.env.NODE_ENV === 'production' && process.env.STATIC_EXPORT === 'true') && {
+  // Enhanced redirects (disabled for static export, handled by _redirects file)
+  ...(!isStaticExport && {
     async redirects() {
       return [
+        // Legacy governance routes
         {
           source: '/governance',
-          destination: '/dao/proposals',
+          destination: '/proposals',
           permanent: true,
         },
         {
           source: '/vote',
-          destination: '/dao/proposals',
+          destination: '/proposals',
           permanent: true,
         },
         {
           source: '/voting',
-          destination: '/dao/proposals',
+          destination: '/proposals',
+          permanent: true,
+        },
+        // DAO routes
+        {
+          source: '/dao',
+          destination: '/proposals',
+          permanent: true,
+        },
+        {
+          source: '/dao/governance',
+          destination: '/proposals',
+          permanent: true,
+        },
+        // Legacy proposal routes
+        {
+          source: '/proposal/:id',
+          destination: '/proposals/:id',
           permanent: true,
         },
       ];
+    },
+  }),
+
+  // Enhanced rewrites for API compatibility
+  ...(!isStaticExport && {
+    async rewrites() {
+      return [
+        // API routes for Cloudflare compatibility
+        {
+          source: '/api/health',
+          destination: '/api/health',
+        },
+        // IPFS gateway rewrites
+        {
+          source: '/ipfs/:hash*',
+          destination: '/api/ipfs/:hash*',
+        },
+      ];
+    },
+  }),
+
+  // Output configuration
+  output: isStaticExport ? 'export' : 'standalone',
+
+  // Cloudflare-specific optimizations
+  ...(isCloudflarePages && {
+    // Additional Cloudflare Pages optimizations
+    generateBuildId: async () => {
+      return process.env.CF_PAGES_COMMIT_SHA || 'development'
     },
   }),
 };

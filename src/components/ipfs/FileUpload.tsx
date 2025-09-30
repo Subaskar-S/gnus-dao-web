@@ -173,11 +173,11 @@ export function FileUpload({
 
   const getFileIcon = (file: File) => {
     if (file.type.startsWith('image/')) {
-      return <Image className="w-4 h-4" />
+      return <Image className="w-4 h-4" aria-label="Image file icon" />
     } else if (file.type.includes('text') || file.type.includes('document')) {
-      return <FileText className="w-4 h-4" />
+      return <FileText className="w-4 h-4" aria-label="Text file icon" />
     }
-    return <File className="w-4 h-4" />
+    return <File className="w-4 h-4" aria-label="File icon" />
   }
 
   const isUploading = uploadingFiles.some(uf => uf.status === 'uploading')

@@ -1,16 +1,34 @@
-# Cloudflare Pages configuration for GNUS DAO
+# Enhanced Cloudflare Pages configuration for GNUS DAO
 name = "gnus-dao-web"
 compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 # Global environment variables
 [vars]
 CLOUDFLARE_PAGES = "true"
+NODE_ENV = "production"
 
-# KV namespace for IPFS caching (optional)
+# KV namespace for IPFS caching and application data
 [[kv_namespaces]]
 binding = "IPFS_CACHE"
 id = "your-kv-namespace-id"
 preview_id = "your-preview-kv-namespace-id"
+
+# Additional KV for application state
+[[kv_namespaces]]
+binding = "APP_CACHE"
+id = "your-app-kv-namespace-id"
+preview_id = "your-preview-app-kv-namespace-id"
+
+# Durable Objects for real-time features (future use)
+# [[durable_objects.bindings]]
+# name = "PROPOSAL_COUNTER"
+# class_name = "ProposalCounter"
+
+# R2 bucket for large file storage (future use)
+# [[r2_buckets]]
+# binding = "PROPOSAL_STORAGE"
+# bucket_name = "gnus-dao-proposals"
 
 [env.production]
 # Production environment configuration
@@ -18,37 +36,86 @@ preview_id = "your-preview-kv-namespace-id"
 NODE_ENV = "production"
 STATIC_EXPORT = "true"
 CLOUDFLARE_PAGES = "true"
+USE_CLOUDFLARE_ADAPTER = "false"
 NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
+NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
+
+[env.production-adapter]
+# Production with Cloudflare adapter (for SSR features)
+[env.production-adapter.vars]
+NODE_ENV = "production"
+STATIC_EXPORT = "false"
+CLOUDFLARE_PAGES = "true"
+USE_CLOUDFLARE_ADAPTER = "true"
+NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
+NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
 
 [env.preview]
 # Preview environment configuration
 [env.preview.vars]
 NODE_ENV = "development"
+STATIC_EXPORT = "true"
+CLOUDFLARE_PAGES = "true"
+USE_CLOUDFLARE_ADAPTER = "false"
 
-# Pages configuration
+[env.preview-adapter]
+# Preview with adapter for testing SSR features
+[env.preview-adapter.vars]
+NODE_ENV = "development"
+STATIC_EXPORT = "false"
+CLOUDFLARE_PAGES = "true"
+USE_CLOUDFLARE_ADAPTER = "true"
+
+# Enhanced Pages configuration
 [pages]
-# For static export (legacy)
+# Build configuration for static export (default)
 pages_build_output_dir = "out"
 build_command = "yarn build:cloudflare"
 
-# For adapter build (recommended)
+# Alternative: Adapter build for SSR features
 # pages_build_output_dir = ".vercel/output/static"
 # build_command = "yarn build:cloudflare-adapter"
 
-# Custom domains (configure in Cloudflare dashboard)
-# custom_domains = ["dao.gnus.ai"]
+# Build settings
+node_version = "18"
+build_timeout = 600  # 10 minutes
 
-# Environment variables (set in Cloudflare dashboard)
-# These should be configured in the Cloudflare Pages dashboard:
+# Custom domains (configure in Cloudflare dashboard)
+# custom_domains = ["dao.gnus.ai", "www.dao.gnus.ai"]
+
+# Functions configuration for _worker.js
+[pages.functions]
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables for Cloudflare Pages dashboard:
+#
+# Required:
 # - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 # - NEXT_PUBLIC_ETHEREUM_RPC_URL
 # - NEXT_PUBLIC_BASE_RPC_URL
 # - NEXT_PUBLIC_POLYGON_RPC_URL
 # - NEXT_PUBLIC_SKALE_RPC_URL
-# - NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS (for testnet)
+#
+# Contract addresses:
+# - NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS (testnet)
+# - NEXT_PUBLIC_MAINNET_GNUS_DAO_ADDRESS (mainnet)
+# - NEXT_PUBLIC_BASE_GNUS_DAO_ADDRESS (Base network)
+# - NEXT_PUBLIC_POLYGON_GNUS_DAO_ADDRESS (Polygon)
+# - NEXT_PUBLIC_SKALE_GNUS_DAO_ADDRESS (SKALE)
+#
+# IPFS configuration:
 # - NEXT_PUBLIC_PINATA_API_KEY
 # - NEXT_PUBLIC_PINATA_SECRET_KEY
 # - NEXT_PUBLIC_PINATA_JWT
 # - PINATA_JWT (for worker functions)
+#
+# Optional:
+# - NEXT_PUBLIC_ALCHEMY_API_KEY
+# - NEXT_PUBLIC_INFURA_API_KEY
+# - NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING
+# - NEXT_PUBLIC_ANALYTICS_ID
 
-# Security headers are configured in public/_headers file
+# Security headers and redirects are configured in:
+# - public/_headers (security headers)
+# - public/_redirects (URL redirects and SPA routing)

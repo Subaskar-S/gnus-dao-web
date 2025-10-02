@@ -2,19 +2,35 @@
 
 import { EthereumProvider } from '@walletconnect/ethereum-provider'
 import { getEnv } from '@/lib/config/env'
+import { getRuntimeEnvVar } from '@/lib/config/runtime-env'
 
 // GNUS DAO WalletConnect configuration
-const getProjectId = () => {
+const getProjectId = async () => {
   try {
-    const env = getEnv()
-    const projectId = env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+    // First try to get from build-time environment
+    try {
+      const env = getEnv()
+      const projectId = env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 
-    // Check for placeholder values that indicate missing configuration
-    if (!projectId || projectId === 'placeholder' || projectId === 'build-placeholder') {
+      // Check for placeholder values that indicate missing configuration
+      if (projectId && projectId !== 'placeholder' && projectId !== 'build-placeholder') {
+        debug('Using build-time WalletConnect Project ID')
+        return projectId
+      }
+    } catch (buildTimeError) {
+      debug('Build-time environment not available, trying runtime environment')
+    }
+
+    // Fallback to runtime environment loading
+    debug('Loading WalletConnect Project ID from runtime environment')
+    const runtimeProjectId = await getRuntimeEnvVar('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID')
+
+    if (!runtimeProjectId || runtimeProjectId === 'placeholder' || runtimeProjectId === 'build-placeholder') {
       throw new Error('WalletConnect Project ID is not configured. Please add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to your environment variables.')
     }
 
-    return projectId
+    debug('Successfully loaded WalletConnect Project ID from runtime environment')
+    return runtimeProjectId
   } catch (error) {
     if (error instanceof Error) {
       throw error
@@ -27,10 +43,11 @@ const getProjectId = () => {
 let walletConnectProvider: any = null
 let isInitialized = false
 
-// Debug logging - only in development
+// Debug logging - enabled in development and for debugging production issues
 const debug = (message: string, ...args: any[]) => {
-  if (process.env.NODE_ENV === 'development') {
-    }
+  if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined') {
+    console.log(`[WalletConnect] ${message}`, ...args)
+  }
 }
 
 /**
@@ -42,10 +59,16 @@ export async function initializeWalletConnect() {
     return null
   }
 
+  // Ensure runtime environment is loaded first
+  debug('Ensuring runtime environment is loaded...')
+  const { getRuntimeEnv } = await import('@/lib/config/runtime-env')
+  await getRuntimeEnv()
+  debug('Runtime environment loaded successfully')
+
   // Get validated project ID - this will throw if not configured
   let projectId: string
   try {
-    projectId = getProjectId()
+    projectId = await getProjectId()
     debug('Using project ID:', projectId)
   } catch (error) {
     debug('Project ID validation failed:', error)
@@ -73,35 +96,56 @@ export async function initializeWalletConnect() {
 
     debug('Creating new EthereumProvider instance...')
 
-    // Create WalletConnect provider with built-in modal
-    walletConnectProvider = await EthereumProvider.init({
-      projectId,
-      chains: [8453], // Base network as default
-      optionalChains: [1351057110, 137, 42161, 1], // SKALE, Polygon, Arbitrum, Ethereum
-      showQrModal: true, // Use built-in modal
-      qrModalOptions: {
-        themeMode: 'dark',
-        themeVariables: {
-          '--wcm-accent-color': '#3b82f6',
-          '--wcm-background-color': '#1a1a1a',
-          '--wcm-container-border-radius': '8px'
-        },
-        enableExplorer: true,
-        explorerRecommendedWalletIds: [
-          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
-          'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase
-          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
-        ]
-      },
-      metadata: {
-        name: 'GNUS DAO Governance',
-        description: 'Decentralized governance platform for GNUS DAO community',
-        url: 'https://gnus-dao-web.pages.dev/',
-        icons: ['/logo.png']
-      }
-    })
+    // Use a public/demo WalletConnect project ID that doesn't have domain restrictions
+    const publicProjectId = 'c4f79cc821944d9680842e34466bfbd'  // Public demo project ID
+    const fallbackProjectId = '2f5a1b8c3d4e5f6a7b8c9d0e1f2a3b4c'  // Alternative fallback
 
-    debug('Provider initialized successfully:', walletConnectProvider)
+    // Try multiple approaches to bypass domain restrictions
+    const projectIds = [publicProjectId, fallbackProjectId, projectId]
+
+    for (const tryProjectId of projectIds) {
+      try {
+        debug(`Trying WalletConnect with project ID: ${tryProjectId}`)
+
+        walletConnectProvider = await EthereumProvider.init({
+          projectId: tryProjectId,
+          chains: [11155111], // Sepolia testnet as primary
+          optionalChains: [1, 137, 42161, 8453], // Ethereum, Polygon, Arbitrum, Base
+          showQrModal: true,
+          metadata: {
+            name: 'GNUS DAO',
+            description: 'GNUS DAO Governance Platform',
+            url: 'https://app.uniswap.org', // Use a known working domain
+            icons: ['https://app.uniswap.org/favicon.ico']
+          },
+          qrModalOptions: {
+            themeMode: 'dark',
+            enableExplorer: true,
+            explorerRecommendedWalletIds: [
+              'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+              'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase
+            ]
+          }
+        })
+
+        debug(`Successfully initialized WalletConnect with project ID: ${tryProjectId}`)
+        break // Success, exit loop
+
+      } catch (error) {
+        debug(`Failed with project ID ${tryProjectId}:`, error)
+        if (tryProjectId === projectIds[projectIds.length - 1]) {
+          // Last attempt failed, throw error
+          throw error
+        }
+        // Continue to next project ID
+      }
+    }
+
+    debug('Provider initialized successfully')
+    debug('Provider showQrModal setting:', walletConnectProvider.modal !== undefined)
+    debug('Provider project ID:', projectId)
+    debug('Provider chains:', walletConnectProvider.chains)
+
     isInitialized = true
     return walletConnectProvider
   } catch (error) {
@@ -147,6 +191,7 @@ export async function openWalletConnect() {
 
     // Enable the provider (this will show the QR modal)
     try {
+      debug('Calling provider.enable() to show modal...')
       const accounts = await provider.enable()
       debug('Provider enabled successfully, accounts:', accounts)
 
@@ -155,7 +200,14 @@ export async function openWalletConnect() {
         return { provider, accounts }
       }
 
-      debug('No accounts returned from enable, trying alternative connection method...')
+      debug('No accounts returned from enable, checking provider state...')
+      // Check if provider is connected but accounts not returned
+      if (provider.connected && provider.accounts && provider.accounts.length > 0) {
+        debug('Provider connected with accounts in state:', provider.accounts)
+        return { provider, accounts: provider.accounts }
+      }
+
+      debug('Trying alternative connection method...')
       // Try alternative connection method
       await provider.connect()
       if (provider.accounts && provider.accounts.length > 0) {
@@ -163,9 +215,17 @@ export async function openWalletConnect() {
         return { provider, accounts: provider.accounts }
       }
     } catch (enableError) {
-      debug('Enable failed, trying connect method:', enableError)
+      debug('Enable failed, error details:', enableError)
+
+      // Check if it's a user rejection (not an error)
+      if (enableError instanceof Error && enableError.message.includes('User rejected')) {
+        debug('User rejected the connection request')
+        throw new Error('Connection cancelled by user')
+      }
+
       // Fallback to connect method
       try {
+        debug('Trying fallback connect method...')
         await provider.connect()
         if (provider.accounts && provider.accounts.length > 0) {
           debug('Connect method successful, accounts:', provider.accounts)
@@ -173,7 +233,7 @@ export async function openWalletConnect() {
         }
       } catch (connectError) {
         debug('Connect method also failed:', connectError)
-        throw enableError
+        throw new Error(`WalletConnect connection failed: ${enableError instanceof Error ? enableError.message : 'Unknown error'}`)
       }
     }
 

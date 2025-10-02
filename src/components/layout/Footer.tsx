@@ -1,57 +1,57 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { Zap, Github, Twitter, MessageCircle, Mail } from 'lucide-react'
+import Link from "next/link";
+import { Zap, Github, Twitter, MessageCircle, Mail } from "lucide-react";
 
 const navigation = {
   governance: [
-    { name: 'Proposals', href: '/proposals' },
-    { name: 'Treasury', href: '/treasury' },
-    { name: 'Analytics', href: '/analytics' },
-    { name: 'Voting History', href: '/voting-history' },
+    { name: "Proposals", href: "/proposals" },
+    { name: "Treasury", href: "/treasury" },
+    { name: "Analytics", href: "/analytics" },
+    { name: "Voting History", href: "/voting-history" },
   ],
   resources: [
-    { name: 'Documentation', href: '/docs' },
-    { name: 'API Reference', href: '/api' },
-    { name: 'Tutorials', href: '/tutorials' },
-    { name: 'FAQ', href: '/faq' },
+    { name: "Documentation", href: "/docs" },
+    { name: "API Reference", href: "/api" },
+    { name: "Tutorials", href: "/tutorials" },
+    { name: "FAQ", href: "/faq" },
   ],
   community: [
-    { name: 'Discord', href: 'https://discord.gg/gnus-dao' },
-    { name: 'Twitter', href: 'https://twitter.com/gnusdao' },
-    { name: 'GitHub', href: 'https://github.com/GeniusVentures/gnus-dao' },
-    { name: 'Forum', href: 'https://forum.gnus.ai' },
+    { name: "Discord", href: "https://discord.gg" },
+    { name: "Twitter", href: "https://twitter.com/gnusdao" },
+    { name: "GitHub", href: "https://github.com/GeniusVentures/gnus-dao" },
+    { name: "Forum", href: "https://forum.gnus.ai" },
   ],
   legal: [
-    { name: 'Privacy Policy', href: '/privacy' },
-    { name: 'Terms of Service', href: '/terms' },
-    { name: 'Cookie Policy', href: '/cookies' },
-    { name: 'Security', href: '/security' },
+    { name: "Privacy Policy", href: "/privacy" },
+    { name: "Terms of Service", href: "/terms" },
+    { name: "Cookie Policy", href: "/cookies" },
+    { name: "Security", href: "/security" },
   ],
-}
+};
 
 const socialLinks = [
   {
-    name: 'Twitter',
-    href: 'https://twitter.com/gnusdao',
+    name: "Twitter",
+    href: "https://twitter.com",
     icon: Twitter,
   },
   {
-    name: 'Discord',
-    href: 'https://discord.gg/gnus-dao',
+    name: "Discord",
+    href: "https://discord.gg",
     icon: MessageCircle,
   },
   {
-    name: 'GitHub',
-    href: 'https://github.com/GeniusVentures/gnus-dao',
+    name: "GitHub",
+    href: "https://github.com/GeniusVentures/gnus-dao",
     icon: Github,
   },
   {
-    name: 'Email',
-    href: 'mailto:contact@gnus.ai',
+    name: "Email",
+    href: "mailto:contact@gnus.ai",
     icon: Mail,
   },
-]
+];
 
 export function Footer() {
   return (
@@ -69,12 +69,12 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-              Enterprise-grade decentralized governance platform with quadratic voting, 
-              multi-chain support, and Diamond pattern smart contracts.
+              Enterprise-grade decentralized governance platform with quadratic
+              voting, multi-chain support, and Diamond pattern smart contracts.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((item) => {
-                const Icon = item.icon
+                const Icon = item.icon;
                 return (
                   <a
                     key={item.name}
@@ -86,7 +86,7 @@ export function Footer() {
                     <span className="sr-only">{item.name}</span>
                     <Icon className="h-5 w-5" />
                   </a>
-                )
+                );
               })}
             </div>
           </div>
@@ -177,5 +177,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

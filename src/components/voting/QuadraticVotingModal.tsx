@@ -1,128 +1,133 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { 
-  Calculator, 
-  Info, 
-  CheckCircle, 
-  XCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  Calculator,
+  Info,
+  CheckCircle,
+  XCircle,
   MinusCircle,
   Zap,
-  AlertTriangle
-} from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { useWeb3Store } from '@/lib/web3/reduxProvider'
-import { gnusDaoService } from '@/lib/contracts/gnusDaoService'
-import { VoteSupport } from '@/lib/contracts/gnusDao'
-import { toast } from 'react-hot-toast'
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { useWeb3Store } from "@/lib/web3/reduxProvider";
+import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
+import { VoteSupport } from "@/lib/contracts/gnusDao";
+import { toast } from "react-hot-toast";
 
 interface QuadraticVotingModalProps {
-  proposalId: bigint
-  proposalTitle: string
-  onClose: () => void
-  onVoteSubmitted: () => void
+  proposalId: bigint;
+  proposalTitle: string;
+  onClose: () => void;
+  onVoteSubmitted: () => void;
 }
 
 export function QuadraticVotingModal({
   proposalId,
   proposalTitle,
   onClose,
-  onVoteSubmitted
+  onVoteSubmitted,
 }: QuadraticVotingModalProps) {
-  const { wallet, voteCredits } = useWeb3Store()
-  const [selectedSupport, setSelectedSupport] = useState<VoteSupport | null>(null)
-  const [creditsToSpend, setCreditsToSpend] = useState<number>(1)
-  const [votingPower, setVotingPower] = useState<number>(1)
-  const [loading, setLoading] = useState(false)
-  const [userCredits, setUserCredits] = useState<bigint>(0n)
+  const { wallet, voteCredits } = useWeb3Store();
+  const [selectedSupport, setSelectedSupport] = useState<VoteSupport | null>(
+    null,
+  );
+  const [creditsToSpend, setCreditsToSpend] = useState<number>(1);
+  const [votingPower, setVotingPower] = useState<number>(1);
+  const [loading, setLoading] = useState(false);
+  const [userCredits, setUserCredits] = useState<bigint>(0n);
 
   useEffect(() => {
-    loadUserCredits()
-  }, [wallet.address])
+    loadUserCredits();
+  }, [wallet.address]);
 
   useEffect(() => {
     // Calculate quadratic voting power: sqrt(credits)
-    setVotingPower(Math.floor(Math.sqrt(creditsToSpend)))
-  }, [creditsToSpend])
+    setVotingPower(Math.floor(Math.sqrt(creditsToSpend)));
+  }, [creditsToSpend]);
 
   const loadUserCredits = async () => {
-    if (!wallet.address) return
+    if (!wallet.address) return;
 
     try {
-      const credits = await gnusDaoService.getVoteCredits(wallet.address)
-      setUserCredits(credits)
+      const credits = await gnusDaoService.getVoteCredits(wallet.address);
+      setUserCredits(credits);
     } catch (error) {
-      console.error('Failed to load vote credits:', error)
+      console.error("Failed to load vote credits:", error);
     }
-  }
+  };
 
   const handleVote = async () => {
-    if (selectedSupport === null || !wallet.address) return
+    if (selectedSupport === null || !wallet.address) return;
 
     try {
-      setLoading(true)
-      
+      setLoading(true);
+
       const tx = await gnusDaoService.castQuadraticVote(
         proposalId,
         selectedSupport,
-        BigInt(creditsToSpend)
-      )
-      
-      toast.success('Quadratic vote submitted! Waiting for confirmation...')
-      await tx.wait()
-      toast.success('Vote confirmed!')
-      
-      onVoteSubmitted()
-      onClose()
+        BigInt(creditsToSpend),
+      );
+
+      toast.success("Quadratic vote submitted! Waiting for confirmation...");
+      await tx.wait();
+      toast.success("Vote confirmed!");
+
+      onVoteSubmitted();
+      onClose();
     } catch (error) {
-      console.error('Failed to submit quadratic vote:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to submit vote')
+      console.error("Failed to submit quadratic vote:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit vote",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getSupportName = (support: VoteSupport): string => {
     switch (support) {
       case VoteSupport.For:
-        return 'For'
+        return "For";
       case VoteSupport.Against:
-        return 'Against'
+        return "Against";
       case VoteSupport.Abstain:
-        return 'Abstain'
+        return "Abstain";
       default:
-        return 'Unknown'
+        return "Unknown";
     }
-  }
+  };
 
   const getSupportIcon = (support: VoteSupport) => {
     switch (support) {
       case VoteSupport.For:
-        return <CheckCircle className="h-5 w-5 text-green-500" />
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case VoteSupport.Against:
-        return <XCircle className="h-5 w-5 text-red-500" />
+        return <XCircle className="h-5 w-5 text-red-500" />;
       case VoteSupport.Abstain:
-        return <MinusCircle className="h-5 w-5 text-gray-500" />
+        return <MinusCircle className="h-5 w-5 text-gray-500" />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const getSupportColor = (support: VoteSupport): string => {
     switch (support) {
       case VoteSupport.For:
-        return 'border-green-500 bg-green-50 dark:bg-green-900/20'
+        return "border-green-500 bg-green-50 dark:bg-green-900/20";
       case VoteSupport.Against:
-        return 'border-red-500 bg-red-50 dark:bg-red-900/20'
+        return "border-red-500 bg-red-50 dark:bg-red-900/20";
       case VoteSupport.Abstain:
-        return 'border-gray-500 bg-gray-50 dark:bg-gray-900/20'
+        return "border-gray-500 bg-gray-50 dark:bg-gray-900/20";
       default:
-        return 'border-input hover:bg-accent'
+        return "border-input hover:bg-accent";
     }
-  }
+  };
 
-  const maxCredits = Math.min(Number(userCredits), 10000) // Cap at 10k for UI
-  const efficiency = creditsToSpend > 0 ? (votingPower / creditsToSpend) * 100 : 0
+  const maxCredits = Math.min(Number(userCredits), 10000); // Cap at 10k for UI
+  const efficiency =
+    creditsToSpend > 0 ? (votingPower / creditsToSpend) * 100 : 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -151,8 +156,9 @@ export function QuadraticVotingModal({
                 How Quadratic Voting Works
               </h4>
               <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
-                Quadratic voting allows you to express the intensity of your preferences. 
-                The more credits you spend, the more voting power you get, but with diminishing returns.
+                Quadratic voting allows you to express the intensity of your
+                preferences. The more credits you spend, the more voting power
+                you get, but with diminishing returns.
               </p>
               <p className="text-sm text-blue-800 dark:text-blue-200">
                 <strong>Formula:</strong> Voting Power = √(Credits Spent)
@@ -171,7 +177,7 @@ export function QuadraticVotingModal({
             <div
               className="bg-purple-500 h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${maxCredits > 0 ? (creditsToSpend / maxCredits) * 100 : 0}%`
+                width: `${maxCredits > 0 ? (creditsToSpend / maxCredits) * 100 : 0}%`,
               }}
             />
           </div>
@@ -184,13 +190,13 @@ export function QuadraticVotingModal({
         {/* Vote Options */}
         <div className="space-y-3 mb-6">
           <h4 className="font-medium">Select Your Vote</h4>
-          
+
           <button
             onClick={() => setSelectedSupport(VoteSupport.For)}
             className={`w-full p-4 border rounded-lg text-left transition-colors ${
               selectedSupport === VoteSupport.For
                 ? getSupportColor(VoteSupport.For)
-                : 'border-input hover:bg-accent'
+                : "border-input hover:bg-accent"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -209,7 +215,7 @@ export function QuadraticVotingModal({
             className={`w-full p-4 border rounded-lg text-left transition-colors ${
               selectedSupport === VoteSupport.Against
                 ? getSupportColor(VoteSupport.Against)
-                : 'border-input hover:bg-accent'
+                : "border-input hover:bg-accent"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -228,7 +234,7 @@ export function QuadraticVotingModal({
             className={`w-full p-4 border rounded-lg text-left transition-colors ${
               selectedSupport === VoteSupport.Abstain
                 ? getSupportColor(VoteSupport.Abstain)
-                : 'border-input hover:bg-accent'
+                : "border-input hover:bg-accent"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -254,7 +260,7 @@ export function QuadraticVotingModal({
               </span>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <input
               type="range"
@@ -264,7 +270,7 @@ export function QuadraticVotingModal({
               onChange={(e) => setCreditsToSpend(Number(e.target.value))}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
             />
-            
+
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>1 credit</span>
               <span>{maxCredits} credits</span>
@@ -276,7 +282,11 @@ export function QuadraticVotingModal({
                 min="1"
                 max={maxCredits}
                 value={creditsToSpend}
-                onChange={(e) => setCreditsToSpend(Math.max(1, Math.min(maxCredits, Number(e.target.value))))}
+                onChange={(e) =>
+                  setCreditsToSpend(
+                    Math.max(1, Math.min(maxCredits, Number(e.target.value))),
+                  )
+                }
                 className="px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Credits"
               />
@@ -296,12 +306,11 @@ export function QuadraticVotingModal({
                 Voting Efficiency: {efficiency.toFixed(1)}%
               </h4>
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                {efficiency > 50 
+                {efficiency > 50
                   ? "High efficiency - you're getting good value for your credits"
                   : efficiency > 25
-                  ? "Moderate efficiency - consider if this level of conviction is worth the cost"
-                  : "Low efficiency - spending many credits for diminishing returns"
-                }
+                    ? "Moderate efficiency - consider if this level of conviction is worth the cost"
+                    : "Low efficiency - spending many credits for diminishing returns"}
               </p>
             </div>
           </div>
@@ -314,7 +323,9 @@ export function QuadraticVotingModal({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Vote:</span>
-                <span className="font-medium">{getSupportName(selectedSupport)}</span>
+                <span className="font-medium">
+                  {getSupportName(selectedSupport)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Credits Spent:</span>
@@ -326,7 +337,9 @@ export function QuadraticVotingModal({
               </div>
               <div className="flex justify-between">
                 <span>Remaining Credits:</span>
-                <span className="font-medium">{Number(userCredits) - creditsToSpend}</span>
+                <span className="font-medium">
+                  {Number(userCredits) - creditsToSpend}
+                </span>
               </div>
             </div>
           </div>
@@ -344,20 +357,25 @@ export function QuadraticVotingModal({
           </Button>
           <Button
             onClick={handleVote}
-            disabled={selectedSupport === null || loading || creditsToSpend > Number(userCredits)}
+            disabled={
+              selectedSupport === null ||
+              loading ||
+              creditsToSpend > Number(userCredits)
+            }
             className="flex-1"
           >
-            {loading ? 'Submitting...' : 'Submit Quadratic Vote'}
+            {loading ? "Submitting..." : "Submit Quadratic Vote"}
           </Button>
         </div>
 
         {/* Warning for insufficient credits */}
         {creditsToSpend > Number(userCredits) && (
           <div className="mt-3 text-sm text-red-600 dark:text-red-400 text-center">
-            Insufficient vote credits. You need {creditsToSpend - Number(userCredits)} more credits.
+            Insufficient vote credits. You need{" "}
+            {creditsToSpend - Number(userCredits)} more credits.
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -273,13 +273,8 @@ jest.mock('@pinata/sdk', () => ({
 // IPFS HTTP client is not used in the current implementation
 // Using Pinata API directly instead
 
-jest.mock('multiformats/cid', () => ({
-  CID: {
-    parse: jest.fn().mockReturnValue({
-      toString: () => 'QmTestHash123',
-    }),
-  },
-}))
+// Note: multiformats/cid mock removed as it's causing issues
+// Tests should mock IPFS functionality at the service level instead
 
 
 

@@ -1285,24 +1285,6 @@
       "_diamondSelector": "0xc47ea632"
     },
     {
-      "inputs": [],
-      "name": "diamondInitialize100",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function",
-      "_diamondFacet": "GNUSDAOInitFacet",
-      "_diamondSelector": "0xd4fb2a3e"
-    },
-    {
-      "inputs": [],
-      "name": "diamondInitUpgrade100",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function",
-      "_diamondFacet": "GNUSDAOInitFacet",
-      "_diamondSelector": "0xfef41fe4"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -2430,10 +2412,10 @@
   "linkReferences": {},
   "deployedLinkReferences": {},
   "_diamondMetadata": {
-    "generatedAt": "2025-09-02T10:20:54.256Z",
+    "generatedAt": "2025-10-01T06:50:55.719Z",
     "diamondName": "GNUSDAODiamond",
-    "networkName": "hardhat",
-    "chainId": 31337,
+    "networkName": "sepolia",
+    "chainId": 11155111,
     "selectorMap": {
       "0x1f931c1c": "DiamondCutFacet",
       "0xcdffacc6": "DiamondLoupeFacet",
@@ -2452,9 +2434,7 @@
       "0x36568abe": "GNUSDAOOwnershipFacet",
       "0xd547741f": "GNUSDAOOwnershipFacet",
       "0xf2fde38b": "GNUSDAOOwnershipFacet",
-      "0xfef41fe4": "GNUSDAOInitFacet",
       "0xc47ea632": "GNUSDAOInitFacet",
-      "0xd4fb2a3e": "GNUSDAOInitFacet",
       "0x4c0f38c2": "GNUSDAOValueFacet",
       "0xd13d9066": "GNUSDAOValueFacet",
       "0x862b092b": "GNUSDAOValueFacet",
@@ -2516,12 +2496,12 @@
       "0xcc951dba": "GNUSDAOVotingMechanismsFacet"
     },
     "stats": {
-      "totalFunctions": 79,
+      "totalFunctions": 77,
       "totalEvents": 24,
       "totalErrors": 43,
       "facetCount": 8,
       "duplicateSelectorsSkipped": 0
     }
   },
-  "metadata": "{\"compiler\":\"diamond-abi-generator\",\"generatedAt\":\"2025-09-02T10:20:54.256Z\",\"networkName\":\"hardhat\",\"chainId\":31337,\"selectorMap\":{\"0x1f931c1c\":\"DiamondCutFacet\",\"0xcdffacc6\":\"DiamondLoupeFacet\",\"0x52ef6b2c\":\"DiamondLoupeFacet\",\"0xadfca15e\":\"DiamondLoupeFacet\",\"0x7a0ed627\":\"DiamondLoupeFacet\",\"0x01ffc9a7\":\"DiamondLoupeFacet\",\"0xa217fddf\":\"GNUSDAOOwnershipFacet\",\"0xf72c0d8b\":\"GNUSDAOOwnershipFacet\",\"0x248a9ca3\":\"GNUSDAOOwnershipFacet\",\"0x9010d07c\":\"GNUSDAOOwnershipFacet\",\"0xca15c873\":\"GNUSDAOOwnershipFacet\",\"0x2f2ff15d\":\"GNUSDAOOwnershipFacet\",\"0x91d14854\":\"GNUSDAOOwnershipFacet\",\"0x8da5cb5b\":\"GNUSDAOOwnershipFacet\",\"0x36568abe\":\"GNUSDAOOwnershipFacet\",\"0xd547741f\":\"GNUSDAOOwnershipFacet\",\"0xf2fde38b\":\"GNUSDAOOwnershipFacet\",\"0xfef41fe4\":\"GNUSDAOInitFacet\",\"0xc47ea632\":\"GNUSDAOInitFacet\",\"0xd4fb2a3e\":\"GNUSDAOInitFacet\",\"0x4c0f38c2\":\"GNUSDAOValueFacet\",\"0xd13d9066\":\"GNUSDAOValueFacet\",\"0x862b092b\":\"GNUSDAOValueFacet\",\"0xf1850af8\":\"GNUSDAOValueFacet\",\"0x20965255\":\"GNUSDAOValueFacet\",\"0x983b2d56\":\"GNUSDAOGovernanceTokenFacet\",\"0xdd62ed3e\":\"GNUSDAOGovernanceTokenFacet\",\"0x095ea7b3\":\"GNUSDAOGovernanceTokenFacet\",\"0x70a08231\":\"GNUSDAOGovernanceTokenFacet\",\"0x42966c68\":\"GNUSDAOGovernanceTokenFacet\",\"0x79cc6790\":\"GNUSDAOGovernanceTokenFacet\",\"0x313ce567\":\"GNUSDAOGovernanceTokenFacet\",\"0x81a4a6d8\":\"GNUSDAOGovernanceTokenFacet\",\"0xb0ca253e\":\"GNUSDAOGovernanceTokenFacet\",\"0xbb4d4436\":\"GNUSDAOGovernanceTokenFacet\",\"0xe8a2bf77\":\"GNUSDAOGovernanceTokenFacet\",\"0xaa271e1a\":\"GNUSDAOGovernanceTokenFacet\",\"0x40c10f19\":\"GNUSDAOGovernanceTokenFacet\",\"0x06fdde03\":\"GNUSDAOGovernanceTokenFacet\",\"0x8456cb59\":\"GNUSDAOGovernanceTokenFacet\",\"0x3092afd5\":\"GNUSDAOGovernanceTokenFacet\",\"0x95d89b41\":\"GNUSDAOGovernanceTokenFacet\",\"0x18160ddd\":\"GNUSDAOGovernanceTokenFacet\",\"0xa9059cbb\":\"GNUSDAOGovernanceTokenFacet\",\"0x23b872dd\":\"GNUSDAOGovernanceTokenFacet\",\"0x3f4ba83a\":\"GNUSDAOGovernanceTokenFacet\",\"0xa333658f\":\"GNUSDAOGovernanceFacet\",\"0xe0a8f6f5\":\"GNUSDAOGovernanceFacet\",\"0x8c5fcdda\":\"GNUSDAOGovernanceFacet\",\"0x718b2058\":\"GNUSDAOGovernanceFacet\",\"0x0d61b519\":\"GNUSDAOGovernanceFacet\",\"0xce5119ee\":\"GNUSDAOGovernanceFacet\",\"0x011b938f\":\"GNUSDAOGovernanceFacet\",\"0x9f83c4b2\":\"GNUSDAOGovernanceFacet\",\"0xc08cc02d\":\"GNUSDAOGovernanceFacet\",\"0x401853b7\":\"GNUSDAOGovernanceFacet\",\"0x9b5655dc\":\"GNUSDAOGovernanceFacet\",\"0xbc3f931f\":\"GNUSDAOGovernanceFacet\",\"0x721c3c64\":\"GNUSDAOGovernanceFacet\",\"0x43859632\":\"GNUSDAOGovernanceFacet\",\"0x55d202a6\":\"GNUSDAOGovernanceFacet\",\"0x3b665994\":\"GNUSDAOGovernanceFacet\",\"0x5c975abb\":\"GNUSDAOGovernanceFacet\",\"0x1c4afc57\":\"GNUSDAOGovernanceFacet\",\"0x2c60bbf1\":\"GNUSDAOGovernanceFacet\",\"0x715018a6\":\"GNUSDAOGovernanceFacet\",\"0xa4d31805\":\"GNUSDAOGovernanceFacet\",\"0xb384abef\":\"GNUSDAOGovernanceFacet\",\"0x0663af08\":\"GNUSDAOGovernanceFacet\",\"0xd88a22cb\":\"GNUSDAOVotingMechanismsFacet\",\"0x2c3556d6\":\"GNUSDAOVotingMechanismsFacet\",\"0x03ba2316\":\"GNUSDAOVotingMechanismsFacet\",\"0xf103dca0\":\"GNUSDAOVotingMechanismsFacet\",\"0x74dd0fea\":\"GNUSDAOVotingMechanismsFacet\",\"0x43bbcf49\":\"GNUSDAOVotingMechanismsFacet\",\"0x546c9fbc\":\"GNUSDAOVotingMechanismsFacet\",\"0x82397cce\":\"GNUSDAOVotingMechanismsFacet\",\"0x5c623903\":\"GNUSDAOVotingMechanismsFacet\",\"0xcc951dba\":\"GNUSDAOVotingMechanismsFacet\"},\"stats\":{\"totalFunctions\":79,\"totalEvents\":24,\"totalErrors\":43,\"facetCount\":8,\"duplicateSelectorsSkipped\":0}}"
+  "metadata": "{\"compiler\":\"diamond-abi-generator\",\"generatedAt\":\"2025-10-01T06:50:55.719Z\",\"networkName\":\"sepolia\",\"chainId\":11155111,\"selectorMap\":{\"0x1f931c1c\":\"DiamondCutFacet\",\"0xcdffacc6\":\"DiamondLoupeFacet\",\"0x52ef6b2c\":\"DiamondLoupeFacet\",\"0xadfca15e\":\"DiamondLoupeFacet\",\"0x7a0ed627\":\"DiamondLoupeFacet\",\"0x01ffc9a7\":\"DiamondLoupeFacet\",\"0xa217fddf\":\"GNUSDAOOwnershipFacet\",\"0xf72c0d8b\":\"GNUSDAOOwnershipFacet\",\"0x248a9ca3\":\"GNUSDAOOwnershipFacet\",\"0x9010d07c\":\"GNUSDAOOwnershipFacet\",\"0xca15c873\":\"GNUSDAOOwnershipFacet\",\"0x2f2ff15d\":\"GNUSDAOOwnershipFacet\",\"0x91d14854\":\"GNUSDAOOwnershipFacet\",\"0x8da5cb5b\":\"GNUSDAOOwnershipFacet\",\"0x36568abe\":\"GNUSDAOOwnershipFacet\",\"0xd547741f\":\"GNUSDAOOwnershipFacet\",\"0xf2fde38b\":\"GNUSDAOOwnershipFacet\",\"0xc47ea632\":\"GNUSDAOInitFacet\",\"0x4c0f38c2\":\"GNUSDAOValueFacet\",\"0xd13d9066\":\"GNUSDAOValueFacet\",\"0x862b092b\":\"GNUSDAOValueFacet\",\"0xf1850af8\":\"GNUSDAOValueFacet\",\"0x20965255\":\"GNUSDAOValueFacet\",\"0x983b2d56\":\"GNUSDAOGovernanceTokenFacet\",\"0xdd62ed3e\":\"GNUSDAOGovernanceTokenFacet\",\"0x095ea7b3\":\"GNUSDAOGovernanceTokenFacet\",\"0x70a08231\":\"GNUSDAOGovernanceTokenFacet\",\"0x42966c68\":\"GNUSDAOGovernanceTokenFacet\",\"0x79cc6790\":\"GNUSDAOGovernanceTokenFacet\",\"0x313ce567\":\"GNUSDAOGovernanceTokenFacet\",\"0x81a4a6d8\":\"GNUSDAOGovernanceTokenFacet\",\"0xb0ca253e\":\"GNUSDAOGovernanceTokenFacet\",\"0xbb4d4436\":\"GNUSDAOGovernanceTokenFacet\",\"0xe8a2bf77\":\"GNUSDAOGovernanceTokenFacet\",\"0xaa271e1a\":\"GNUSDAOGovernanceTokenFacet\",\"0x40c10f19\":\"GNUSDAOGovernanceTokenFacet\",\"0x06fdde03\":\"GNUSDAOGovernanceTokenFacet\",\"0x8456cb59\":\"GNUSDAOGovernanceTokenFacet\",\"0x3092afd5\":\"GNUSDAOGovernanceTokenFacet\",\"0x95d89b41\":\"GNUSDAOGovernanceTokenFacet\",\"0x18160ddd\":\"GNUSDAOGovernanceTokenFacet\",\"0xa9059cbb\":\"GNUSDAOGovernanceTokenFacet\",\"0x23b872dd\":\"GNUSDAOGovernanceTokenFacet\",\"0x3f4ba83a\":\"GNUSDAOGovernanceTokenFacet\",\"0xa333658f\":\"GNUSDAOGovernanceFacet\",\"0xe0a8f6f5\":\"GNUSDAOGovernanceFacet\",\"0x8c5fcdda\":\"GNUSDAOGovernanceFacet\",\"0x718b2058\":\"GNUSDAOGovernanceFacet\",\"0x0d61b519\":\"GNUSDAOGovernanceFacet\",\"0xce5119ee\":\"GNUSDAOGovernanceFacet\",\"0x011b938f\":\"GNUSDAOGovernanceFacet\",\"0x9f83c4b2\":\"GNUSDAOGovernanceFacet\",\"0xc08cc02d\":\"GNUSDAOGovernanceFacet\",\"0x401853b7\":\"GNUSDAOGovernanceFacet\",\"0x9b5655dc\":\"GNUSDAOGovernanceFacet\",\"0xbc3f931f\":\"GNUSDAOGovernanceFacet\",\"0x721c3c64\":\"GNUSDAOGovernanceFacet\",\"0x43859632\":\"GNUSDAOGovernanceFacet\",\"0x55d202a6\":\"GNUSDAOGovernanceFacet\",\"0x3b665994\":\"GNUSDAOGovernanceFacet\",\"0x5c975abb\":\"GNUSDAOGovernanceFacet\",\"0x1c4afc57\":\"GNUSDAOGovernanceFacet\",\"0x2c60bbf1\":\"GNUSDAOGovernanceFacet\",\"0x715018a6\":\"GNUSDAOGovernanceFacet\",\"0xa4d31805\":\"GNUSDAOGovernanceFacet\",\"0xb384abef\":\"GNUSDAOGovernanceFacet\",\"0x0663af08\":\"GNUSDAOGovernanceFacet\",\"0xd88a22cb\":\"GNUSDAOVotingMechanismsFacet\",\"0x2c3556d6\":\"GNUSDAOVotingMechanismsFacet\",\"0x03ba2316\":\"GNUSDAOVotingMechanismsFacet\",\"0xf103dca0\":\"GNUSDAOVotingMechanismsFacet\",\"0x74dd0fea\":\"GNUSDAOVotingMechanismsFacet\",\"0x43bbcf49\":\"GNUSDAOVotingMechanismsFacet\",\"0x546c9fbc\":\"GNUSDAOVotingMechanismsFacet\",\"0x82397cce\":\"GNUSDAOVotingMechanismsFacet\",\"0x5c623903\":\"GNUSDAOVotingMechanismsFacet\",\"0xcc951dba\":\"GNUSDAOVotingMechanismsFacet\"},\"stats\":{\"totalFunctions\":77,\"totalEvents\":24,\"totalErrors\":43,\"facetCount\":8,\"duplicateSelectorsSkipped\":0}}"
 }

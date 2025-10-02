@@ -107,6 +107,12 @@ export const walletConnectConnector: WalletConnector = {
 
   connect: async () => {
     try {
+      // Ensure runtime environment is loaded before initializing WalletConnect
+      const { getRuntimeEnv } = await import('@/lib/config/runtime-env')
+
+      console.log('[WalletConnect] Ensuring runtime environment is loaded...')
+      await getRuntimeEnv() // This will load the environment if not already loaded
+
       // Use WalletConnect v2 provider with built-in modal
       const { openWalletConnect } = await import('@/lib/web3/appkit')
 

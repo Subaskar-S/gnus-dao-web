@@ -1,10 +1,14 @@
-'use client'
+"use client";
 
-import React, { Suspense, lazy } from 'react'
-import { ErrorBoundary } from '@/components/error/ErrorBoundary'
+import React, { Suspense, lazy } from "react";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 // Lazy load the CreateProposalModal to reduce initial bundle size
-const CreateProposalModal = lazy(() => import('./CreateProposalModal').then(module => ({ default: module.CreateProposalModal })))
+const CreateProposalModal = lazy(() =>
+  import("./CreateProposalModal").then((module) => ({
+    default: module.CreateProposalModal,
+  })),
+);
 
 // Loading component for proposal modal
 function ProposalModalLoading() {
@@ -13,22 +17,24 @@ function ProposalModalLoading() {
       <div className="bg-card border rounded-lg p-6 w-full max-w-4xl">
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-sm text-muted-foreground">Loading proposal form...</span>
+          <span className="ml-2 text-sm text-muted-foreground">
+            Loading proposal form...
+          </span>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // Error fallback component
-function ProposalModalErrorFallback({ 
-  error, 
+function ProposalModalErrorFallback({
+  error,
   resetErrorBoundary,
-  onClose 
-}: { 
-  error: Error
-  resetErrorBoundary: () => void
-  onClose: () => void
+  onClose,
+}: {
+  error: Error;
+  resetErrorBoundary: () => void;
+  onClose: () => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -38,7 +44,7 @@ function ProposalModalErrorFallback({
             Proposal Form Error
           </h3>
           <p className="text-sm text-muted-foreground mb-4 text-center">
-            {error.message || 'Failed to load proposal creation form'}
+            {error.message || "Failed to load proposal creation form"}
           </p>
           <div className="flex gap-2">
             <button
@@ -57,22 +63,28 @@ function ProposalModalErrorFallback({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface LazyCreateProposalModalProps {
-  onClose: () => void
-  onProposalCreated: () => void
+  onClose: () => void;
+  onProposalCreated: () => void;
 }
 
 export function LazyCreateProposalModal(props: LazyCreateProposalModalProps) {
-  const { onClose } = props
+  const { onClose } = props;
 
   return (
     <ErrorBoundary
-      fallback={<ProposalModalErrorFallback error={new Error('Proposal Modal Error')} resetErrorBoundary={() => window.location.reload()} onClose={onClose} />}
+      fallback={
+        <ProposalModalErrorFallback
+          error={new Error("Proposal Modal Error")}
+          resetErrorBoundary={() => window.location.reload()}
+          onClose={onClose}
+        />
+      }
       onError={(error, errorInfo) => {
-        console.error('Proposal Modal Error:', error, errorInfo)
+        console.error("Proposal Modal Error:", error, errorInfo);
       }}
       level="component"
     >
@@ -80,5 +92,5 @@ export function LazyCreateProposalModal(props: LazyCreateProposalModalProps) {
         <CreateProposalModal {...props} />
       </Suspense>
     </ErrorBoundary>
-  )
+  );
 }

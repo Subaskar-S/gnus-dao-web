@@ -37,7 +37,8 @@ NODE_ENV = "production"
 STATIC_EXPORT = "true"
 CLOUDFLARE_PAGES = "true"
 USE_CLOUDFLARE_ADAPTER = "false"
-NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = "805f6520f2f2934352c65fe6bd70d15d"
+NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x57AE78C65F7Dd6d158DE9F4cA9CCeaA98C988199"
 NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
 
 [env.production-adapter]
@@ -47,7 +48,8 @@ NODE_ENV = "production"
 STATIC_EXPORT = "false"
 CLOUDFLARE_PAGES = "true"
 USE_CLOUDFLARE_ADAPTER = "true"
-NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF"
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = "805f6520f2f2934352c65fe6bd70d15d"
+NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x57AE78C65F7Dd6d158DE9F4cA9CCeaA98C988199"
 NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
 
 [env.preview]
@@ -66,27 +68,11 @@ STATIC_EXPORT = "false"
 CLOUDFLARE_PAGES = "true"
 USE_CLOUDFLARE_ADAPTER = "true"
 
-# Enhanced Pages configuration
-[pages]
-# Build configuration for static export (default)
-pages_build_output_dir = "out"
-build_command = "yarn build:cloudflare"
-
-# Alternative: Adapter build for SSR features
-# pages_build_output_dir = ".vercel/output/static"
-# build_command = "yarn build:cloudflare-adapter"
-
-# Build settings
-node_version = "18"
-build_timeout = 600  # 10 minutes
-
-# Custom domains (configure in Cloudflare dashboard)
-# custom_domains = ["dao.gnus.ai", "www.dao.gnus.ai"]
-
-# Functions configuration for _worker.js
-[pages.functions]
-compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
+# Build configuration for Cloudflare Pages
+# Note: These settings are configured in the Cloudflare Pages dashboard
+# Build command: yarn build:hybrid
+# Build output directory: out
+# Node.js version: 18
 
 # Environment variables for Cloudflare Pages dashboard:
 #

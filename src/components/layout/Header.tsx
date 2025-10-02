@@ -1,26 +1,25 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useTheme } from 'next-themes'
-import { Button } from '@/components/ui/Button'
-import { WalletStatus } from '@/components/wallet/ConnectWalletButton'
-import { NetworkSelector } from '@/components/wallet/NetworkSelector'
-import { AuthButton } from '@/components/auth/AuthButton'
-import { cn } from '@/lib/utils'
-import { Menu, X, Sun, Moon, Zap } from 'lucide-react'
+import { useState } from "react";
+import Link from "next/link";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/Button";
+import { WalletStatus } from "@/components/wallet/ConnectWalletButton";
+import { NetworkSelector } from "@/components/wallet/NetworkSelector";
+import { AuthButton } from "@/components/auth/AuthButton";
+import { cn } from "@/lib/utils";
+import { Menu, X, Sun, Moon, Zap } from "lucide-react";
 
 export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const navigation = [
-    { name: 'Proposals', href: '/proposals' },
-    { name: 'Treasury', href: '/treasury' },
-    { name: 'Governance', href: '/governance' },
-    { name: 'Analytics', href: '/analytics' },
-    { name: 'Docs', href: '/docs' },
-  ]
+    { name: "Proposals", href: "/proposals" },
+    { name: "Treasury", href: "/treasury" },
+    { name: "Analytics", href: "/analytics" },
+    { name: "Docs", href: "/docs" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -54,7 +53,7 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="h-9 w-9"
             >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -102,7 +101,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   className="h-8"
                 >
                   <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -120,5 +119,5 @@ export function Header() {
         )}
       </div>
     </header>
-  )
+  );
 }

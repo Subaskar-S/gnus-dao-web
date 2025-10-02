@@ -30,13 +30,19 @@ const nextConfig = {
     },
   }),
 
-  // Static export configuration for standard Cloudflare Pages
+  // Hybrid configuration: Static export with API routes for runtime config
   ...(isProduction && isStaticExport && !useAdapter && {
     output: 'export',
-    trailingSlash: true,
+    trailingSlash: false, // Changed to false for better Cloudflare Pages compatibility
     distDir: 'out',
     images: {
       unoptimized: true, // Required for static export
+    },
+    // Enable API routes for runtime configuration
+    experimental: {
+      ...((isProduction && isStaticExport && !useAdapter) ? {} : {
+        runtime: 'edge',
+      }),
     },
   }),
 
@@ -251,7 +257,25 @@ const nextConfig = {
         },
         // Static assets caching
         {
-          source: '/(_next/static|favicon|manifest|icon-|apple-touch-icon).*',
+          source: '/_next/static/(.*)',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable',
+            },
+          ],
+        },
+        {
+          source: '/favicon.ico',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable',
+            },
+          ],
+        },
+        {
+          source: '/manifest.json',
           headers: [
             {
               key: 'Cache-Control',

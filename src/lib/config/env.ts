@@ -12,9 +12,7 @@ const isBuildTime = typeof window === 'undefined'
  */
 const envSchema = z.object({
   // WalletConnect Configuration - required for wallet functionality
-  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: isStaticExport && isBuildTime
-    ? z.string().optional().default('build-placeholder')
-    : z.string().min(1, 'WalletConnect Project ID is required for wallet functionality'),
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1, 'WalletConnect Project ID is required for wallet functionality'),
 
   // Application Configuration
   NEXT_PUBLIC_APP_NAME: z.string().default('GNUS DAO'),

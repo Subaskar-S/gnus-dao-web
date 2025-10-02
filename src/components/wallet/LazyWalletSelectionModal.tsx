@@ -1,11 +1,15 @@
-'use client'
+"use client";
 
-import React, { Suspense, lazy } from 'react'
-import { ErrorBoundary } from '@/components/error/ErrorBoundary'
-import { WalletConnector } from '@/lib/web3/types'
+import React, { Suspense, lazy } from "react";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { WalletConnector } from "@/lib/web3/types";
 
 // Lazy load the WalletSelectionModal to reduce initial bundle size
-const WalletSelectionModal = lazy(() => import('./WalletSelectionModal').then(module => ({ default: module.WalletSelectionModal })))
+const WalletSelectionModal = lazy(() =>
+  import("./WalletSelectionModal").then((module) => ({
+    default: module.WalletSelectionModal,
+  })),
+);
 
 // Loading component for wallet modal
 function WalletModalLoading() {
@@ -14,22 +18,24 @@ function WalletModalLoading() {
       <div className="bg-card border rounded-lg p-6 w-full max-w-md">
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-2 text-sm text-muted-foreground">Loading wallets...</span>
+          <span className="ml-2 text-sm text-muted-foreground">
+            Loading wallets...
+          </span>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // Error fallback component
-function WalletModalErrorFallback({ 
-  error, 
+function WalletModalErrorFallback({
+  error,
   resetErrorBoundary,
-  onClose 
-}: { 
-  error: Error
-  resetErrorBoundary: () => void
-  onClose: () => void
+  onClose,
+}: {
+  error: Error;
+  resetErrorBoundary: () => void;
+  onClose: () => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -39,7 +45,7 @@ function WalletModalErrorFallback({
             Wallet Loading Error
           </h3>
           <p className="text-sm text-muted-foreground mb-4 text-center">
-            {error.message || 'Failed to load wallet selection'}
+            {error.message || "Failed to load wallet selection"}
           </p>
           <div className="flex gap-2">
             <button
@@ -58,30 +64,36 @@ function WalletModalErrorFallback({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface LazyWalletSelectionModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelectWallet: (connector: WalletConnector) => Promise<void>
-  connectors: WalletConnector[]
-  isConnecting: boolean
-  connectingWallet?: string | undefined
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectWallet: (connector: WalletConnector) => Promise<void>;
+  connectors: WalletConnector[];
+  isConnecting: boolean;
+  connectingWallet?: string | undefined;
 }
 
 export function LazyWalletSelectionModal(props: LazyWalletSelectionModalProps) {
-  const { isOpen, onClose } = props
+  const { isOpen, onClose } = props;
 
   if (!isOpen) {
-    return null
+    return null;
   }
 
   return (
     <ErrorBoundary
-      fallback={<WalletModalErrorFallback error={new Error('Wallet Modal Error')} resetErrorBoundary={() => window.location.reload()} onClose={onClose} />}
+      fallback={
+        <WalletModalErrorFallback
+          error={new Error("Wallet Modal Error")}
+          resetErrorBoundary={() => window.location.reload()}
+          onClose={onClose}
+        />
+      }
       onError={(error, errorInfo) => {
-        console.error('Wallet Modal Error:', error, errorInfo)
+        console.error("Wallet Modal Error:", error, errorInfo);
       }}
       level="component"
     >
@@ -89,5 +101,5 @@ export function LazyWalletSelectionModal(props: LazyWalletSelectionModalProps) {
         <WalletSelectionModal {...props} />
       </Suspense>
     </ErrorBoundary>
-  )
+  );
 }

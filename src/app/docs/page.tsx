@@ -1,68 +1,71 @@
-import { Metadata } from 'next'
-import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
-import { 
-  BookOpen, 
-  Code, 
-  Users, 
-  Vote, 
-  Wallet, 
-  Network,
+import { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import {
+  BookOpen,
+  Code,
+  Users,
+  Vote,
+  Wallet,
   ExternalLink,
-  ArrowRight
-} from 'lucide-react'
+  ArrowRight,
+} from "lucide-react";
 
 export const metadata: Metadata = {
-  title: 'Documentation',
-  description: 'GNUS DAO documentation and guides',
-}
+  title: "Documentation",
+  description: "GNUS DAO documentation and guides",
+};
 
 const docSections = [
   {
-    title: 'Getting Started',
-    description: 'Learn the basics of GNUS DAO governance',
+    title: "Getting Started",
+    description: "Learn the basics of GNUS DAO governance",
     icon: BookOpen,
     links: [
-      { name: 'What is GNUS DAO?', href: '#what-is-gnus-dao' },
-      { name: 'How to Connect Wallet', href: '#connect-wallet' },
-      { name: 'Understanding Proposals', href: '#proposals' },
-      { name: 'Voting Process', href: '#voting' },
-    ]
+      { name: "What is GNUS DAO?", href: "#what-is-gnus-dao" },
+      { name: "How to Connect Wallet", href: "#connect-wallet" },
+      { name: "Understanding Proposals", href: "#proposals" },
+      { name: "Voting Process", href: "#voting" },
+    ],
   },
   {
-    title: 'Governance',
-    description: 'Understand our governance mechanisms',
+    title: "Governance",
+    description: "Understand our governance mechanisms",
     icon: Vote,
     links: [
-      { name: 'Quadratic Voting', href: '#quadratic-voting' },
-      { name: 'Proposal Creation', href: '#proposal-creation' },
-      { name: 'Treasury Management', href: '#treasury' },
-      { name: 'Voting Power', href: '#voting-power' },
-    ]
+      { name: "Quadratic Voting", href: "#quadratic-voting" },
+      { name: "Proposal Creation", href: "#proposal-creation" },
+      { name: "Treasury Management", href: "#treasury" },
+      { name: "Voting Power", href: "#voting-power" },
+    ],
   },
   {
-    title: 'Technical',
-    description: 'Technical documentation for developers',
+    title: "Technical",
+    description: "Technical documentation for developers",
     icon: Code,
     links: [
-      { name: 'Smart Contracts', href: '#smart-contracts' },
-      { name: 'Diamond Pattern', href: '#diamond-pattern' },
-      { name: 'Multi-Chain Support', href: '#multi-chain' },
-      { name: 'API Reference', href: '#api' },
-    ]
+      { name: "Smart Contracts", href: "#smart-contracts" },
+      { name: "Diamond Pattern", href: "#diamond-pattern" },
+      { name: "Multi-Chain Support", href: "#multi-chain" },
+      { name: "API Reference", href: "#api" },
+    ],
   },
   {
-    title: 'Community',
-    description: 'Join our community and get support',
+    title: "Community",
+    description: "Join our community and get support",
     icon: Users,
     links: [
-      { name: 'Discord', href: 'https://discord.gg/gnus-dao', external: true },
-      { name: 'GitHub', href: 'https://github.com/GeniusVentures/gnus-dao', external: true },
-      { name: 'Forum', href: 'https://forum.gnus.ai', external: true },
-      { name: 'Twitter', href: 'https://twitter.com/gnusdao', external: true },
-    ]
-  }
-]
+      { name: "Discord", href: "https://discord.gg", external: true },
+      {
+        name: "GitHub",
+        href: "https://github.com/GeniusVentures/gnus-dao",
+        external: true,
+      },
+      { name: "Forum", href: "https://forum.gnus.ai", external: true },
+      { name: "Twitter", href: "https://twitter.com", external: true },
+    ],
+  },
+];
 
 export default function DocsPage() {
   return (
@@ -71,7 +74,8 @@ export default function DocsPage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Documentation</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Everything you need to know about GNUS DAO governance, voting, and participation
+          Everything you need to know about GNUS DAO governance, voting, and
+          participation
         </p>
       </div>
 
@@ -87,21 +91,27 @@ export default function DocsPage() {
               <span className="text-primary font-bold">1</span>
             </div>
             <h3 className="font-medium mb-2">Connect Wallet</h3>
-            <p className="text-sm text-muted-foreground">Connect your MetaMask, Coinbase, or WalletConnect wallet</p>
+            <p className="text-sm text-muted-foreground">
+              Connect your MetaMask, Coinbase, or WalletConnect wallet
+            </p>
           </div>
           <div className="text-center">
             <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
               <span className="text-primary font-bold">2</span>
             </div>
             <h3 className="font-medium mb-2">View Proposals</h3>
-            <p className="text-sm text-muted-foreground">Browse active proposals and read the details</p>
+            <p className="text-sm text-muted-foreground">
+              Browse active proposals and read the details
+            </p>
           </div>
           <div className="text-center">
             <div className="bg-primary/10 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
               <span className="text-primary font-bold">3</span>
             </div>
             <h3 className="font-medium mb-2">Vote</h3>
-            <p className="text-sm text-muted-foreground">Cast your vote using quadratic voting mechanism</p>
+            <p className="text-sm text-muted-foreground">
+              Cast your vote using quadratic voting mechanism
+            </p>
           </div>
         </div>
         <div className="text-center mt-6">
@@ -126,7 +136,7 @@ export default function DocsPage() {
             <ul className="space-y-2">
               {section.links.map((link) => (
                 <li key={link.name}>
-                  {'external' in link && link.external ? (
+                  {"external" in link && link.external ? (
                     <a
                       href={link.href}
                       target="_blank"
@@ -159,13 +169,21 @@ export default function DocsPage() {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button variant="outline" asChild>
-            <a href="https://discord.gg/gnus-dao" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://discord.gg"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Join Discord
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="https://github.com/GeniusVentures/gnus-dao" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://github.com/GeniusVentures/gnus-dao"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               GitHub Issues
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
@@ -173,5 +191,5 @@ export default function DocsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

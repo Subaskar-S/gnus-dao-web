@@ -37,6 +37,7 @@ export interface ProposalMetadata {
     start: number
     end: number
   }
+  executionDelay?: number
 }
 
 export interface IPFSPinStatus {

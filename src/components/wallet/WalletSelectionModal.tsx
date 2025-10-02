@@ -1,56 +1,61 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/Button'
-import { X, Wallet, Smartphone, Monitor } from 'lucide-react'
-import { WalletConnector } from '@/lib/web3/types'
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/Button";
+import { X, Wallet, Smartphone, Monitor } from "lucide-react";
+import { WalletConnector } from "@/lib/web3/types";
 
 interface WalletSelectionModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelectWallet: (connector: WalletConnector) => Promise<void>
-  connectors: WalletConnector[]
-  isConnecting: boolean
-  connectingWallet?: string | undefined
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectWallet: (connector: WalletConnector) => Promise<void>;
+  connectors: WalletConnector[];
+  isConnecting: boolean;
+  connectingWallet?: string | undefined;
 }
 
-export function WalletSelectionModal({ 
-  isOpen, 
-  onClose, 
+export function WalletSelectionModal({
+  isOpen,
+  onClose,
   onSelectWallet,
   connectors,
   isConnecting,
-  connectingWallet
+  connectingWallet,
 }: WalletSelectionModalProps) {
   const handleWalletSelect = async (connector: WalletConnector) => {
     try {
-      await onSelectWallet(connector)
-      onClose()
+      await onSelectWallet(connector);
+      onClose();
     } catch (error) {
-      console.error('Wallet connection failed:', error)
+      console.error("Wallet connection failed:", error);
     }
-  }
+  };
 
   const getWalletIcon = (walletId: string) => {
     switch (walletId) {
-      case 'metamask':
-        return '🦊'
-      case 'coinbase':
-        return '🔵'
-      case 'walletconnect':
-        return '🔗'
+      case "metamask":
+        return "🦊";
+      case "coinbase":
+        return "🔵";
+      case "walletconnect":
+        return "🔗";
       default:
-        return '👛'
+        return "👛";
     }
-  }
+  };
 
   const getWalletDescription = (connector: WalletConnector) => {
-    if (connector.id === 'walletconnect') {
-      return 'Scan QR code with mobile wallet'
+    if (connector.id === "walletconnect") {
+      return "Scan QR code with mobile wallet";
     }
-    return connector.description
-  }
+    return connector.description;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -79,9 +84,10 @@ export function WalletSelectionModal({
 
           <div className="space-y-2">
             {connectors.map((connector) => {
-              const isAvailable = connector.isAvailable()
-              const isCurrentlyConnecting = isConnecting && connectingWallet === connector.id
-              
+              const isAvailable = connector.isAvailable();
+              const isCurrentlyConnecting =
+                isConnecting && connectingWallet === connector.id;
+
               return (
                 <Button
                   key={connector.id}
@@ -110,7 +116,7 @@ export function WalletSelectionModal({
                     {isCurrentlyConnecting && (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     )}
-                    {connector.id === 'walletconnect' && (
+                    {connector.id === "walletconnect" && (
                       <div className="flex gap-1">
                         <Smartphone className="h-4 w-4 text-gray-400" />
                         <Monitor className="h-4 w-4 text-gray-400" />
@@ -118,7 +124,7 @@ export function WalletSelectionModal({
                     )}
                   </div>
                 </Button>
-              )
+              );
             })}
           </div>
 
@@ -133,7 +139,9 @@ export function WalletSelectionModal({
               </p>
               <Button
                 variant="outline"
-                onClick={() => window.open('https://metamask.io/download/', '_blank')}
+                onClick={() =>
+                  window.open("https://metamask.io/download/", "_blank")
+                }
               >
                 Install MetaMask
               </Button>
@@ -151,5 +159,5 @@ export function WalletSelectionModal({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

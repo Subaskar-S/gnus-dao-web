@@ -15,7 +15,7 @@
 /proposal/:id /proposals/:id 301
 
 # Proposal detail pages (SPA routing)
-/proposals/* /proposals/[id] 200
+/proposals/* /proposals/index.html 200
 
 # Treasury routes (SPA routing)
 /treasury/* /treasury 200

@@ -1,54 +1,56 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  PieChart, 
+import React, { useState, useEffect } from "react";
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  PieChart,
   BarChart3,
   ExternalLink,
   RefreshCw,
   Download,
   Send,
-  Plus
-} from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { AuthGuard } from '@/components/auth/AuthButton'
-import { useWeb3Store } from '@/lib/web3/reduxProvider'
-import { gnusDaoService } from '@/lib/contracts/gnusDaoService'
-import { formatAddress } from '@/lib/utils'
-import { toast } from 'react-hot-toast'
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { AuthGuard } from "@/components/auth/AuthButton";
+import { useWeb3Store } from "@/lib/web3/reduxProvider";
+import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
+import { formatAddress } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 
 interface TreasuryAsset {
-  address: string
-  symbol: string
-  name: string
-  balance: bigint
-  decimals: number
-  usdValue: number
-  change24h: number
+  address: string;
+  symbol: string;
+  name: string;
+  balance: bigint;
+  decimals: number;
+  usdValue: number;
+  change24h: number;
 }
 
 interface TreasuryStats {
-  totalValue: number
-  change24h: number
-  nativeBalance: bigint
-  tokenCount: number
-  lastUpdated: Date
+  totalValue: number;
+  change24h: number;
+  nativeBalance: bigint;
+  tokenCount: number;
+  lastUpdated: Date;
 }
 
 export default function TreasuryPage() {
-  const { wallet, currentNetwork, gnusDaoInitialized } = useWeb3Store()
-  const [treasuryStats, setTreasuryStats] = useState<TreasuryStats | null>(null)
-  const [assets, setAssets] = useState<TreasuryAsset[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const { wallet, currentNetwork, gnusDaoInitialized } = useWeb3Store();
+  const [treasuryStats, setTreasuryStats] = useState<TreasuryStats | null>(
+    null,
+  );
+  const [assets, setAssets] = useState<TreasuryAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadTreasuryData()
-  }, [gnusDaoInitialized])
+    loadTreasuryData();
+  }, [gnusDaoInitialized]);
 
   const loadTreasuryData = async () => {
     if (!gnusDaoInitialized) {
@@ -58,85 +60,88 @@ export default function TreasuryPage() {
         change24h: 0,
         nativeBalance: 0n,
         tokenCount: 0,
-        lastUpdated: new Date()
-      })
-      setAssets([])
-      setLoading(false)
-      return
+        lastUpdated: new Date(),
+      });
+      setAssets([]);
+      setLoading(false);
+      return;
     }
 
     try {
-      setLoading(true)
+      setLoading(true);
 
       // Get real treasury balance from contract
-      const nativeBalance = await gnusDaoService.getTreasuryBalance()
+      const nativeBalance = await gnusDaoService.getTreasuryBalance();
 
       // Create assets array with real data
       const realAssets: TreasuryAsset[] = [
         {
-          address: '0x0000000000000000000000000000000000000000',
-          symbol: currentNetwork?.nativeCurrency.symbol || 'ETH',
-          name: currentNetwork?.nativeCurrency.name || 'Ethereum',
+          address: "0x0000000000000000000000000000000000000000",
+          symbol: currentNetwork?.nativeCurrency.symbol || "ETH",
+          name: currentNetwork?.nativeCurrency.name || "Ethereum",
           balance: nativeBalance,
           decimals: 18,
-          usdValue: Number(nativeBalance) * 2000 / 1e18, // Mock ETH price for USD calculation
+          usdValue: (Number(nativeBalance) * 2000) / 1e18, // Mock ETH price for USD calculation
           change24h: 0, // Would need price API for real change data
-        }
-      ]
+        },
+      ];
 
       // For Sepolia testnet, we might not have many tokens, so we'll show what we have
-      const totalValue = realAssets.reduce((sum, asset) => sum + asset.usdValue, 0)
+      const totalValue = realAssets.reduce(
+        (sum, asset) => sum + asset.usdValue,
+        0,
+      );
 
-      setAssets(realAssets)
+      setAssets(realAssets);
       setTreasuryStats({
         totalValue,
         change24h: 0, // Would need historical data for real change calculation
         nativeBalance,
         tokenCount: realAssets.length,
         lastUpdated: new Date(),
-      })
+      });
     } catch (error) {
-      console.error('Failed to load treasury data:', error)
-      toast.error('Failed to load treasury data')
+      console.error("Failed to load treasury data:", error);
+      toast.error("Failed to load treasury data");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleRefresh = async () => {
-    setRefreshing(true)
-    await loadTreasuryData()
-    setRefreshing(false)
-    toast.success('Treasury data refreshed')
-  }
+    setRefreshing(true);
+    await loadTreasuryData();
+    setRefreshing(false);
+    toast.success("Treasury data refreshed");
+  };
 
   const formatBalance = (balance: bigint, decimals: number): string => {
-    const divisor = BigInt(10 ** decimals)
-    const whole = balance / divisor
-    const fraction = balance % divisor
-    
+    const divisor = BigInt(10 ** decimals);
+    const whole = balance / divisor;
+    const fraction = balance % divisor;
+
     if (fraction === 0n) {
-      return whole.toString()
+      return whole.toString();
     }
-    
-    const fractionStr = fraction.toString().padStart(decimals, '0')
-    const trimmed = fractionStr.replace(/0+$/, '')
-    return `${whole}.${trimmed}`
-  }
+
+    const fractionStr = fraction.toString().padStart(decimals, "0");
+    const trimmed = fractionStr.replace(/0+$/, "");
+    return `${whole}.${trimmed}`;
+  };
 
   const formatUSD = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value)
-  }
+    }).format(value);
+  };
 
   const formatChange = (change: number): string => {
-    const sign = change >= 0 ? '+' : ''
-    return `${sign}${change.toFixed(2)}%`
-  }
+    const sign = change >= 0 ? "+" : "";
+    return `${sign}${change.toFixed(2)}%`;
+  };
 
   // Skip contract check for testing
   // if (!gnusDaoInitialized) {
@@ -170,13 +175,12 @@ export default function TreasuryPage() {
               disabled={refreshing}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" className="flex items-center gap-2">
               <Download className="h-4 w-4" />
               Export
             </Button>
@@ -186,7 +190,9 @@ export default function TreasuryPage() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading treasury data...</p>
+            <p className="mt-4 text-muted-foreground">
+              Loading treasury data...
+            </p>
           </div>
         ) : (
           <>
@@ -196,14 +202,22 @@ export default function TreasuryPage() {
                 <div className="flex items-center">
                   <DollarSign className="h-8 w-8 text-green-500" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Total Value</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total Value
+                    </p>
                     <p className="text-2xl font-bold">
-                      {treasuryStats ? formatUSD(treasuryStats.totalValue) : '$0'}
+                      {treasuryStats
+                        ? formatUSD(treasuryStats.totalValue)
+                        : "$0"}
                     </p>
                     {treasuryStats && (
-                      <p className={`text-sm flex items-center ${
-                        treasuryStats.change24h >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <p
+                        className={`text-sm flex items-center ${
+                          treasuryStats.change24h >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
                         {treasuryStats.change24h >= 0 ? (
                           <TrendingUp className="h-3 w-3 mr-1" />
                         ) : (
@@ -220,15 +234,16 @@ export default function TreasuryPage() {
                 <div className="flex items-center">
                   <Wallet className="h-8 w-8 text-blue-500" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Native Balance</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Native Balance
+                    </p>
                     <p className="text-2xl font-bold">
-                      {treasuryStats 
+                      {treasuryStats
                         ? formatBalance(treasuryStats.nativeBalance, 18)
-                        : '0'
-                      }
+                        : "0"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {currentNetwork?.nativeCurrency.symbol || 'ETH'}
+                      {currentNetwork?.nativeCurrency.symbol || "ETH"}
                     </p>
                   </div>
                 </div>
@@ -238,9 +253,13 @@ export default function TreasuryPage() {
                 <div className="flex items-center">
                   <PieChart className="h-8 w-8 text-purple-500" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Assets</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Assets
+                    </p>
                     <p className="text-2xl font-bold">{assets.length}</p>
-                    <p className="text-sm text-muted-foreground">Different tokens</p>
+                    <p className="text-sm text-muted-foreground">
+                      Different tokens
+                    </p>
                   </div>
                 </div>
               </div>
@@ -249,12 +268,15 @@ export default function TreasuryPage() {
                 <div className="flex items-center">
                   <BarChart3 className="h-8 w-8 text-orange-500" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Last Updated
+                    </p>
                     <p className="text-lg font-bold">
-                      {treasuryStats?.lastUpdated.toLocaleTimeString() || 'Never'}
+                      {treasuryStats?.lastUpdated.toLocaleTimeString() ||
+                        "Never"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {treasuryStats?.lastUpdated.toLocaleDateString() || ''}
+                      {treasuryStats?.lastUpdated.toLocaleDateString() || ""}
                     </p>
                   </div>
                 </div>
@@ -266,7 +288,7 @@ export default function TreasuryPage() {
               <div className="px-6 py-4 border-b">
                 <h2 className="text-lg font-semibold">Treasury Assets</h2>
               </div>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted/50">
@@ -297,8 +319,12 @@ export default function TreasuryPage() {
                               {asset.symbol.charAt(0)}
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium">{asset.name}</div>
-                              <div className="text-sm text-muted-foreground">{asset.symbol}</div>
+                              <div className="text-sm font-medium">
+                                {asset.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {asset.symbol}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -306,7 +332,9 @@ export default function TreasuryPage() {
                           <div className="text-sm font-medium">
                             {formatBalance(asset.balance, asset.decimals)}
                           </div>
-                          <div className="text-sm text-muted-foreground">{asset.symbol}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {asset.symbol}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium">
@@ -314,9 +342,13 @@ export default function TreasuryPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className={`text-sm flex items-center ${
-                            asset.change24h >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <div
+                            className={`text-sm flex items-center ${
+                              asset.change24h >= 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
                             {asset.change24h >= 0 ? (
                               <TrendingUp className="h-3 w-3 mr-1" />
                             ) : (
@@ -362,18 +394,22 @@ export default function TreasuryPage() {
                 >
                   <Send className="h-6 w-6" />
                   <span className="font-medium">Transfer Assets</span>
-                  <span className="text-xs text-muted-foreground">Send tokens to addresses</span>
+                  <span className="text-xs text-muted-foreground">
+                    Send tokens to addresses
+                  </span>
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   className="h-20 flex-col items-center gap-2"
                 >
                   <Plus className="h-6 w-6" />
                   <span className="font-medium">Add Asset</span>
-                  <span className="text-xs text-muted-foreground">Track new token</span>
+                  <span className="text-xs text-muted-foreground">
+                    Track new token
+                  </span>
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   className="h-20 flex-col items-center gap-2"
@@ -381,7 +417,9 @@ export default function TreasuryPage() {
                 >
                   <BarChart3 className="h-6 w-6" />
                   <span className="font-medium">Analytics</span>
-                  <span className="text-xs text-muted-foreground">View detailed reports</span>
+                  <span className="text-xs text-muted-foreground">
+                    View detailed reports
+                  </span>
                 </Button>
               </div>
             </div>
@@ -389,5 +427,5 @@ export default function TreasuryPage() {
         )}
       </div>
     </AuthGuard>
-  )
+  );
 }

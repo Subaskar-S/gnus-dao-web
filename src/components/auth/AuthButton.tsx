@@ -1,26 +1,26 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Shield, ShieldCheck, Clock, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { useWeb3Store } from '@/lib/web3/reduxProvider'
-import { useSiwe } from '@/lib/auth/useSiwe'
-import { toast } from 'react-hot-toast'
+import React from "react";
+import { Shield, ShieldCheck, Clock, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { useWeb3Store } from "@/lib/web3/reduxProvider";
+import { useSiwe } from "@/lib/auth/useSiwe";
+import { toast } from "react-hot-toast";
 
 interface AuthButtonProps {
-  variant?: 'default' | 'outline' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
-  showStatus?: boolean
-  className?: string
+  variant?: "default" | "outline" | "ghost";
+  size?: "sm" | "md" | "lg";
+  showStatus?: boolean;
+  className?: string;
 }
 
-export function AuthButton({ 
-  variant = 'default', 
-  size = 'md',
+export function AuthButton({
+  variant = "default",
+  size = "md",
   showStatus = true,
-  className 
+  className,
 }: AuthButtonProps) {
-  const { wallet } = useWeb3Store()
+  const { wallet } = useWeb3Store();
   const {
     isAuthenticated,
     isAuthenticating,
@@ -31,32 +31,33 @@ export function AuthButton({
     needsAuthentication,
     canAuthenticate,
     clearError,
-  } = useSiwe()
+  } = useSiwe();
 
   const handleSignIn = async () => {
     if (!canAuthenticate()) {
-      toast.error('Please connect your wallet first')
-      return
+      toast.error("Please connect your wallet first");
+      return;
     }
 
     try {
-      clearError()
-      await signIn()
-      toast.success('Successfully authenticated with Ethereum!')
+      clearError();
+      await signIn();
+      toast.success("Successfully authenticated with Ethereum!");
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Authentication failed'
-      toast.error(message)
+      const message =
+        error instanceof Error ? error.message : "Authentication failed";
+      toast.error(message);
     }
-  }
+  };
 
   const handleSignOut = () => {
-    signOut()
-    toast.success('Signed out successfully')
-  }
+    signOut();
+    toast.success("Signed out successfully");
+  };
 
   // Don't show if wallet is not connected
   if (!wallet.isConnected) {
-    return null
+    return null;
   }
 
   // Show authentication status
@@ -86,7 +87,7 @@ export function AuthButton({
           Sign Out
         </Button>
       </div>
-    )
+    );
   }
 
   // Show authentication needed
@@ -103,29 +104,29 @@ export function AuthButton({
         )}
         <Button
           variant={variant}
-          size={size === 'md' ? 'default' : size}
+          size={size === "md" ? "default" : size}
           onClick={handleSignIn}
           disabled={isAuthenticating}
-          className={`flex items-center gap-2 ${className || ''}`}
+          className={`flex items-center gap-2 ${className || ""}`}
         >
           <Shield className="h-4 w-4" />
-          {isAuthenticating ? 'Authenticating...' : 'Sign In with Ethereum'}
+          {isAuthenticating ? "Authenticating..." : "Sign In with Ethereum"}
         </Button>
       </div>
-    )
+    );
   }
 
-  return null
+  return null;
 }
 
 interface AuthStatusProps {
-  compact?: boolean
-  className?: string
+  compact?: boolean;
+  className?: string;
 }
 
 export function AuthStatus({ compact = false, className }: AuthStatusProps) {
-  const { wallet } = useWeb3Store()
-  const { isAuthenticated, sessionInfo, needsAuthentication } = useSiwe()
+  const { wallet } = useWeb3Store();
+  const { isAuthenticated, sessionInfo, needsAuthentication } = useSiwe();
 
   if (!wallet.isConnected) {
     return (
@@ -135,7 +136,7 @@ export function AuthStatus({ compact = false, className }: AuthStatusProps) {
           Not connected
         </span>
       </div>
-    )
+    );
   }
 
   if (isAuthenticated) {
@@ -153,7 +154,7 @@ export function AuthStatus({ compact = false, className }: AuthStatusProps) {
           )}
         </div>
       </div>
-    )
+    );
   }
 
   if (needsAuthentication()) {
@@ -164,7 +165,7 @@ export function AuthStatus({ compact = false, className }: AuthStatusProps) {
           Authentication required
         </span>
       </div>
-    )
+    );
   }
 
   return (
@@ -174,26 +175,26 @@ export function AuthStatus({ compact = false, className }: AuthStatusProps) {
         Ready to authenticate
       </span>
     </div>
-  )
+  );
 }
 
 interface AuthGuardProps {
-  children: React.ReactNode
-  fallback?: React.ReactNode
-  requireAuth?: boolean
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  requireAuth?: boolean;
 }
 
 export function AuthGuard({
   children,
   fallback,
-  requireAuth = true
+  requireAuth = true,
 }: AuthGuardProps) {
-  const { wallet } = useWeb3Store()
-  const { isAuthenticated, needsAuthentication } = useSiwe()
+  const { wallet } = useWeb3Store();
+  const { isAuthenticated, needsAuthentication } = useSiwe();
 
   // If auth is not required, skip all checks and show children
   if (!requireAuth) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   if (!wallet.isConnected) {
@@ -207,38 +208,42 @@ export function AuthGuard({
           Please connect your wallet to access this feature.
         </p>
       </div>
-    )
+    );
   }
 
   if (requireAuth && needsAuthentication()) {
-    return fallback || (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <Shield className="h-12 w-12 text-yellow-500 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Authentication Required
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Please sign in with Ethereum to access governance features.
-        </p>
-        <AuthButton />
-      </div>
-    )
+    return (
+      fallback || (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <Shield className="h-12 w-12 text-yellow-500 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Authentication Required
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Please sign in with Ethereum to access governance features.
+          </p>
+          <AuthButton />
+        </div>
+      )
+    );
   }
 
   if (requireAuth && !isAuthenticated) {
-    return fallback || (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <Shield className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Authentication Failed
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Your authentication session is invalid. Please sign in again.
-        </p>
-        <AuthButton />
-      </div>
-    )
+    return (
+      fallback || (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <Shield className="h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Authentication Failed
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Your authentication session is invalid. Please sign in again.
+          </p>
+          <AuthButton />
+        </div>
+      )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

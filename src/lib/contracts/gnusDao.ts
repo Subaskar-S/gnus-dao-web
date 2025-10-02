@@ -5,7 +5,7 @@ import { getContractAddress } from '@/lib/config/env'
 export const GNUS_DAO_CONTRACTS = {
   // Sepolia testnet - deployed Diamond
   11155111: {
-    diamond: getContractAddress('sepolia') || '0x4d638F3c61F7B8BBa4461f80a4aa7315795812EF',
+    diamond: getContractAddress('sepolia') || '0x57AE78C65F7Dd6d158DE9F4cA9CCeaA98C988199',
     deployer: '0x6Ec7f5dFb77c7CAbAB4Ed722660b1d8bA1605B43',
   },
   // Base mainnet
@@ -85,38 +85,33 @@ export const GOVERNANCE_TOKEN_ABI = [
   'event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance)',
 ] as const
 
-// Governance functions for proposals and voting
+// Governance functions for proposals and voting (ACTUAL DEPLOYED CONTRACT)
 export const GOVERNANCE_ABI = [
-  // Proposal functions
-  'function propose(address[] targets, uint256[] values, bytes[] calldatas, string description) external returns (uint256)',
-  'function proposalCount() external view returns (uint256)',
-  'function proposals(uint256 proposalId) external view returns (tuple(uint256 id, address proposer, uint256 eta, uint256 startBlock, uint256 endBlock, uint256 forVotes, uint256 againstVotes, uint256 abstainVotes, bool canceled, bool executed))',
-  'function getActions(uint256 proposalId) external view returns (address[] targets, uint256[] values, string[] signatures, bytes[] calldatas)',
-  'function getReceipt(uint256 proposalId, address voter) external view returns (tuple(bool hasVoted, uint8 support, uint256 votes))',
-  'function state(uint256 proposalId) external view returns (uint8)',
+  // Proposal functions - CORRECTED TO MATCH DEPLOYED CONTRACT
+  'function propose(string memory title, string memory ipfsHash) external returns (uint256)',
+  'function getProposalCount() external view returns (uint256)',
+  'function getProposalBasic(uint256 proposalId) external view returns (tuple(uint256,address,string,string))',
+  'function getProposalStatus(uint256 proposalId) external view returns (tuple(uint256 startTime, uint256 endTime, uint256 totalVotes, uint256 totalVoters, bool executed, bool cancelled))',
+  'function hasVoted(uint256 proposalId, address voter) external view returns (bool)',
+  'function getVote(uint256 proposalId, address voter) external view returns (tuple(uint256 votes, uint256 tokensCost))',
   
-  // Voting functions
-  'function castVote(uint256 proposalId, uint8 support) external returns (uint256)',
-  'function castVoteWithReason(uint256 proposalId, uint8 support, string reason) external returns (uint256)',
-  'function castVoteBySig(uint256 proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s) external returns (uint256)',
+  // Voting functions - CORRECTED TO MATCH DEPLOYED CONTRACT
+  'function vote(uint256 proposalId, uint256 votes) external',
+  'function calculateQuadraticCost(uint256 votes) external view returns (uint256)',
+  'function validateVote(uint256 votes, uint256 maxVotesPerWallet, uint256 tokenBalance) external view returns (tuple(bool valid, uint256 cost))',
+
+  // Execution functions - CORRECTED TO MATCH DEPLOYED CONTRACT
+  'function executeProposal(uint256 proposalId) external',
+  'function cancelProposal(uint256 proposalId) external',
   
-  // Execution functions
-  'function queue(uint256 proposalId) external',
-  'function execute(uint256 proposalId) external payable',
-  'function cancel(uint256 proposalId) external',
-  
-  // Configuration functions
-  'function votingDelay() external view returns (uint256)',
-  'function votingPeriod() external view returns (uint256)',
-  'function proposalThreshold() external view returns (uint256)',
-  'function quorumVotes() external view returns (uint256)',
-  
-  // Events
-  'event ProposalCreated(uint256 indexed id, address indexed proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
-  'event VoteCast(address indexed voter, uint256 indexed proposalId, uint8 support, uint256 votes, string reason)',
-  'event ProposalCanceled(uint256 indexed id)',
-  'event ProposalQueued(uint256 indexed id, uint256 eta)',
-  'event ProposalExecuted(uint256 indexed id)',
+  // Configuration functions - CORRECTED TO MATCH DEPLOYED CONTRACT
+  'function getVotingConfig() external view returns (tuple(uint256 proposalThreshold, uint256 votingDelay, uint256 votingPeriod, uint256 quorumThreshold, uint256 maxVotesPerWallet, uint256 proposalCooldown))',
+
+  // Events - CORRECTED TO MATCH DEPLOYED CONTRACT
+  'event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string title, string ipfsHash, uint256 startTime, uint256 endTime)',
+  'event VoteCast(uint256 indexed proposalId, address indexed voter, uint256 votes, uint256 tokensCost)',
+  'event ProposalCancelled(uint256 indexed proposalId)',
+  'event ProposalExecuted(uint256 indexed proposalId)',
 ] as const
 
 // Quadratic Voting Mechanism functions
@@ -216,6 +211,15 @@ export enum VoteSupport {
 export interface Proposal {
   id: bigint
   proposer: string
+  title: string
+  ipfsHash: string
+  startTime: bigint
+  endTime: bigint
+  totalVotes: bigint
+  totalVoters: bigint
+  executed: boolean
+  cancelled: boolean
+  // Legacy fields for compatibility
   eta: bigint
   startBlock: bigint
   endBlock: bigint
@@ -223,7 +227,6 @@ export interface Proposal {
   againstVotes: bigint
   abstainVotes: bigint
   canceled: boolean
-  executed: boolean
 }
 
 export interface VoteReceipt {

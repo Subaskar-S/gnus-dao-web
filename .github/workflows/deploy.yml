@@ -1,10 +1,11 @@
-name: Deploy to Cloudflare Pages
+name: 🚀 Deploy GNUS DAO Platform
 
 on:
   push:
     branches:
       - main
       - master
+      - develop
   pull_request:
     branches:
       - main
@@ -16,99 +17,115 @@ permissions:
   statuses: write
   checks: write
   pull-requests: write
+  actions: read
 
 env:
   NODE_VERSION: '18'
   YARN_CACHE_FOLDER: ~/.yarn
 
 jobs:
-  # Separate job for code quality checks
+  # Comprehensive code quality and testing
   quality-checks:
     runs-on: ubuntu-latest
-    name: Code Quality Checks
+    name: 🔍 Code Quality & Testing
 
     steps:
-      - name: Checkout
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
 
-      - name: Enable Corepack
+      - name: 🔧 Enable Corepack
         run: corepack enable
 
-      - name: Install dependencies
+      - name: 📚 Install Dependencies
         run: yarn install --immutable
 
-      - name: Type check
+      - name: 🔍 TypeScript Type Check
         run: yarn type-check
 
-      - name: Fix linting issues
+      - name: 🧹 Fix Linting Issues
         run: node scripts/targeted-lint-fix.js
         continue-on-error: true
 
-      - name: Lint (Production)
-        run: yarn lint --max-warnings 50
+      - name: ✨ ESLint Check
+        run: yarn lint --max-warnings 10
+
+      - name: 🎨 Prettier Format Check
+        run: yarn format:check
         continue-on-error: true
 
-      - name: Run tests
+      - name: 🧪 Run Unit Tests
         run: yarn test:ci
-        continue-on-error: true
 
-  # Main deployment job
+      - name: 📊 Upload Test Coverage
+        uses: codecov/codecov-action@v3
+        if: success()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+  # Production deployment to Cloudflare Pages
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare Pages
+    name: 🚀 Deploy to Production
     needs: quality-checks
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
-      - name: Checkout
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
 
-      - name: Enable Corepack
+      - name: 🔧 Enable Corepack
         run: corepack enable
 
-      - name: Install dependencies
+      - name: 📚 Install Dependencies
         run: yarn install --immutable
 
-      - name: Fix linting issues for production
+      - name: 🧹 Fix Linting Issues
         run: node scripts/targeted-lint-fix.js
         continue-on-error: true
 
-      - name: Build for Cloudflare Pages
+      - name: 🏗️ Build for Production
         env:
           NODE_ENV: production
           STATIC_EXPORT: true
+          CLOUDFLARE_PAGES: true
           NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID }}
           NEXT_PUBLIC_SEPOLIA_RPC_URL: ${{ secrets.NEXT_PUBLIC_SEPOLIA_RPC_URL }}
           NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS: ${{ secrets.NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS }}
           NEXT_PUBLIC_PINATA_API_KEY: ${{ secrets.NEXT_PUBLIC_PINATA_API_KEY }}
           NEXT_PUBLIC_PINATA_SECRET_KEY: ${{ secrets.NEXT_PUBLIC_PINATA_SECRET_KEY }}
+          NEXT_PUBLIC_PINATA_JWT: ${{ secrets.NEXT_PUBLIC_PINATA_JWT }}
         run: |
-          echo "🚀 Starting Cloudflare Pages build..."
-          node scripts/build-cloudflare.js
+          echo "🚀 Building GNUS DAO Platform for production..."
+          yarn build:hybrid
 
-      - name: Validate build output
+      - name: 🔍 Validate Build Output
         run: |
           echo "📊 Build validation:"
           ls -la out/
-          echo "📁 Critical files:"
+          echo "📁 Critical files check:"
           test -f out/index.html && echo "✅ index.html" || echo "❌ index.html missing"
           test -f out/_redirects && echo "✅ _redirects" || echo "❌ _redirects missing"
           test -f out/_headers && echo "✅ _headers" || echo "❌ _headers missing"
           test -d out/_next && echo "✅ _next directory" || echo "❌ _next directory missing"
+          test -f out/runtime-config.json && echo "✅ runtime-config.json" || echo "❌ runtime-config.json missing"
+          echo "📦 Build size:"
+          du -sh out/
 
-      - name: Deploy to Cloudflare Pages
+      - name: 🌐 Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -117,6 +134,12 @@ jobs:
           directory: out
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: '3'
+
+      - name: 🎉 Deployment Success
+        run: |
+          echo "🎉 GNUS DAO Platform deployed successfully!"
+          echo "🌐 Live URL: https://gnus-dao-web.pages.dev"
+          echo "📊 Deployment completed at $(date)"
 
   # Preview deployment for pull requests
   preview:

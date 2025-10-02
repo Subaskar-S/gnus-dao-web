@@ -1,86 +1,154 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Calendar, Users, TrendingUp, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { AuthGuard } from '@/components/auth/AuthButton'
-import { useWeb3Store } from '@/lib/web3/reduxProvider'
-import { gnusDaoService } from '@/lib/contracts/gnusDaoService'
-import { ProposalState, VoteSupport } from '@/lib/contracts/gnusDao'
-import type { Proposal } from '@/lib/contracts/gnusDao'
-import { CreateProposalModal } from '@/components/proposals/CreateProposalModal'
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Calendar,
+  Users,
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { AuthGuard } from "@/components/auth/AuthButton";
+import { useWeb3Store } from "@/lib/web3/reduxProvider";
+import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
+import { ProposalState, VoteSupport } from "@/lib/contracts/gnusDao";
+import type { Proposal } from "@/lib/contracts/gnusDao";
+import { CreateProposalModal } from "@/components/proposals/CreateProposalModal";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 interface ProposalWithMetadata extends Proposal {
-  title: string
-  description: string
-  totalVotes: bigint
-  quorumReached: boolean
-  timeRemaining: string
-  state: ProposalState
+  title: string;
+  description: string;
+  totalVotes: bigint;
+  quorumReached: boolean;
+  timeRemaining: string;
+  state: ProposalState;
+  proposerName?: string;
+  votingPeriodDays?: number;
+  executionDelayDays?: number;
 }
 
 export default function ProposalsPage() {
-  const { wallet, gnusDaoInitialized } = useWeb3Store()
-  const [proposals, setProposals] = useState<ProposalWithMetadata[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterState, setFilterState] = useState<ProposalState | 'all'>('all')
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const { provider, signer } = useWeb3Store();
+  const router = useRouter();
+  const [proposals, setProposals] = useState<ProposalWithMetadata[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterState, setFilterState] = useState<ProposalState | "all">("all");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Load proposals
   useEffect(() => {
     const loadProposals = async () => {
-      // Use real contract data if available, otherwise show empty state
-      if (!gnusDaoInitialized) {
-        setLoading(false)
-        return
-      }
-
       try {
-        setLoading(true)
-        const proposalCount = await gnusDaoService.getProposalCount()
-        const proposalPromises: Promise<ProposalWithMetadata | null>[] = []
+        setLoading(true);
 
-        // Load last 20 proposals or all if less than 20
-        const startId = proposalCount > 20n ? proposalCount - 20n : 1n
-        for (let i = startId; i <= proposalCount; i++) {
-          proposalPromises.push(loadProposalWithMetadata(i))
+        // Initialize service with read-only provider if not already initialized
+        if (!gnusDaoService.isInitialized()) {
+          const { ethers } = await import("ethers");
+          const provider = new ethers.JsonRpcProvider(
+            "https://sepolia.infura.io/v3/a9555646b9fb4da6ab4cc08c782f85ee",
+          );
+          await gnusDaoService.initialize(provider, undefined, 11155111); // Sepolia chain ID
         }
 
-        const loadedProposals = await Promise.all(proposalPromises)
-        const validProposals = loadedProposals.filter((p): p is ProposalWithMetadata => p !== null)
-        
+        const proposalCount = await gnusDaoService.getProposalCount();
+
+        // Get voting configuration
+        const votingConfig = await gnusDaoService.getVotingConfig();
+
+        if (proposalCount === 0n) {
+          setProposals([]);
+          setLoading(false);
+          return;
+        }
+
+        const proposalPromises: Promise<ProposalWithMetadata | null>[] = [];
+
+        // Load last 20 proposals or all if less than 20
+        const startId = proposalCount > 20n ? proposalCount - 20n : 1n;
+        for (let i = startId; i <= proposalCount; i++) {
+          proposalPromises.push(loadProposalWithMetadata(i, votingConfig));
+        }
+
+        const loadedProposals = await Promise.all(proposalPromises);
+        const validProposals = loadedProposals.filter(
+          (p): p is ProposalWithMetadata => p !== null,
+        );
+
         // Sort by ID descending (newest first)
-        validProposals.sort((a, b) => Number(b.id - a.id))
-        setProposals(validProposals)
+        validProposals.sort((a, b) => Number(b.id - a.id));
+        setProposals(validProposals);
       } catch (error) {
-        console.error('Failed to load proposals:', error)
+        console.error("Failed to load proposals:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadProposals()
-  }, [gnusDaoInitialized])
+    loadProposals();
+  }, []); // Remove dependency on gnusDaoInitialized
 
-  const loadProposalWithMetadata = async (proposalId: bigint): Promise<ProposalWithMetadata | null> => {
+  const getProposerName = (address: string): string => {
+    // Could be enhanced with ENS lookup or known addresses
+    const knownAddresses: Record<string, string> = {
+      "0xd446c8Ab1C2765f5185c5A2C2fF5A86d41A1": "Core Team",
+      // Add more known addresses here
+    };
+
+    return (
+      knownAddresses[address] || `${address.slice(0, 6)}...${address.slice(-4)}`
+    );
+  };
+
+  const loadProposalWithMetadata = async (
+    proposalId: bigint,
+    votingConfig: any,
+  ): Promise<ProposalWithMetadata | null> => {
     try {
       const [proposal, state] = await Promise.all([
         gnusDaoService.getProposal(proposalId),
-        gnusDaoService.getProposalState(proposalId)
-      ])
+        gnusDaoService.getProposalState(proposalId),
+      ]);
 
-      if (!proposal) return null
+      if (!proposal) return null;
 
       // Calculate metadata
-      const totalVotes = proposal.forVotes + proposal.againstVotes + proposal.abstainVotes
-      const quorumReached = totalVotes >= 1000000n // Example quorum of 1M tokens
-      const timeRemaining = calculateTimeRemaining(proposal.endBlock)
+      const totalVotes = proposal.totalVotes || 0n;
+      const quorumReached = totalVotes >= 1000000n; // Example quorum of 1M tokens
+      const timeRemaining =
+        proposal.endTime > 0n
+          ? calculateTimeRemaining(proposal.endTime)
+          : "No deadline";
 
-      // For now, create meaningful titles and descriptions based on proposal data
-      // In a real implementation, you'd fetch this from proposal events or IPFS
-      const title = `Proposal #${proposalId}`
-      const description = `Governance proposal submitted by ${proposal.proposer.slice(0, 6)}...${proposal.proposer.slice(-4)}`
+      // Use actual proposal data
+      const title = proposal.title || `Proposal #${proposalId}`;
+
+      // Add voting configuration metadata
+      // If contract returns 0, use reasonable defaults
+      const rawVotingPeriod = votingConfig
+        ? Number(votingConfig.votingPeriod)
+        : 0;
+      const rawVotingDelay = votingConfig
+        ? Number(votingConfig.votingDelay)
+        : 0;
+
+      const votingPeriodDays =
+        rawVotingPeriod > 0 ? rawVotingPeriod / (24 * 60 * 60) : 7; // Convert seconds to days or use default
+      const executionDelayDays =
+        rawVotingDelay > 0 ? rawVotingDelay / (24 * 60 * 60) : 3; // Convert seconds to days or use default
+
+      // Get proposer name (could be enhanced with ENS lookup)
+      const proposerName = getProposerName(proposal.proposer);
+      const description = proposal.ipfsHash
+        ? `IPFS: ${proposal.ipfsHash.slice(0, 20)}... | Submitted by ${proposal.proposer.slice(0, 6)}...${proposal.proposer.slice(-4)}`
+        : `Governance proposal submitted by ${proposal.proposer.slice(0, 6)}...${proposal.proposer.slice(-4)}`;
 
       return {
         ...proposal,
@@ -90,57 +158,53 @@ export default function ProposalsPage() {
         quorumReached,
         timeRemaining,
         state,
-      }
+        proposerName,
+        votingPeriodDays,
+        executionDelayDays,
+      };
     } catch (error) {
-      console.error(`Failed to load proposal ${proposalId}:`, error)
-      return null
+      console.error(`Failed to load proposal ${proposalId}:`, error);
+      return null;
     }
-  }
+  };
 
-  const calculateTimeRemaining = (endBlock: bigint): string => {
-    // Simplified calculation using estimated current Sepolia block
-    // Sepolia has ~12 second block times
-    const currentBlock = 9241000 // Approximate current Sepolia block
-    const blocksRemaining = Number(endBlock) - currentBlock
-    if (blocksRemaining <= 0) return 'Ended'
+  const calculateTimeRemaining = (endTime: bigint | number): string => {
+    if (!endTime || endTime === 0n) return "Active (no deadline)";
 
-    const secondsRemaining = blocksRemaining * 12 // 12 second blocks on Sepolia
-    const hoursRemaining = Math.floor(secondsRemaining / 3600)
-    if (hoursRemaining < 24) return `${hoursRemaining}h remaining`
+    const endTimestamp =
+      typeof endTime === "bigint" ? Number(endTime) : endTime;
 
-    const daysRemaining = Math.floor(hoursRemaining / 24)
-    return `${daysRemaining}d remaining`
-  }
+    // If endTime is 0, it means the proposal doesn't have a proper end time set
+    if (endTimestamp === 0) return "Active";
 
-  const getStateColor = (state: ProposalState): string => {
-    switch (state) {
-      case ProposalState.Active:
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-      case ProposalState.Succeeded:
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-      case ProposalState.Executed:
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
-      case ProposalState.Defeated:
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-      case ProposalState.Canceled:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-      case ProposalState.Queued:
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+    const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+    const secondsRemaining = endTimestamp - now;
+
+    if (secondsRemaining <= 0) return "Voting ended";
+
+    const hoursRemaining = secondsRemaining / 3600;
+
+    if (hoursRemaining < 1) {
+      const minutesRemaining = Math.ceil(secondsRemaining / 60);
+      return `${minutesRemaining} minutes remaining`;
+    } else if (hoursRemaining < 24) {
+      return `${Math.ceil(hoursRemaining)} hours remaining`;
+    } else {
+      const daysRemaining = Math.ceil(hoursRemaining / 24);
+      return `${daysRemaining} days remaining`;
     }
-  }
+  };
 
-  const getStateName = (state: ProposalState): string => {
-    return ProposalState[state] || 'Unknown'
-  }
 
-  const filteredProposals = proposals.filter(proposal => {
-    const matchesSearch = proposal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         proposal.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterState === 'all' || proposal.state === filterState
-    return matchesSearch && matchesFilter
-  })
+
+  const filteredProposals = proposals.filter((proposal) => {
+    const matchesSearch =
+      proposal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      proposal.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterState === "all" || proposal.state === filterState;
+    return matchesSearch && matchesFilter;
+  });
 
   // Show proposals interface even when not initialized (with mock data)
 
@@ -171,7 +235,9 @@ export default function ProposalsPage() {
             <div className="flex items-center">
               <Calendar className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Proposals</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Proposals
+                </p>
                 <p className="text-2xl font-bold">{proposals.length}</p>
               </div>
             </div>
@@ -180,9 +246,14 @@ export default function ProposalsPage() {
             <div className="flex items-center">
               <Users className="h-8 w-8 text-green-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Active
+                </p>
                 <p className="text-2xl font-bold">
-                  {proposals.filter(p => p.state === ProposalState.Active).length}
+                  {
+                    proposals.filter((p) => p.state === ProposalState.Active)
+                      .length
+                  }
                 </p>
               </div>
             </div>
@@ -191,9 +262,14 @@ export default function ProposalsPage() {
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-purple-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Executed</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Executed
+                </p>
                 <p className="text-2xl font-bold">
-                  {proposals.filter(p => p.state === ProposalState.Executed).length}
+                  {
+                    proposals.filter((p) => p.state === ProposalState.Executed)
+                      .length
+                  }
                 </p>
               </div>
             </div>
@@ -202,9 +278,14 @@ export default function ProposalsPage() {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-orange-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Pending
+                </p>
                 <p className="text-2xl font-bold">
-                  {proposals.filter(p => p.state === ProposalState.Pending).length}
+                  {
+                    proposals.filter((p) => p.state === ProposalState.Pending)
+                      .length
+                  }
                 </p>
               </div>
             </div>
@@ -228,7 +309,9 @@ export default function ProposalsPage() {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <select
               value={filterState}
-              onChange={(e) => setFilterState(e.target.value as ProposalState | 'all')}
+              onChange={(e) =>
+                setFilterState(e.target.value as ProposalState | "all")
+              }
               className="px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="all">All States</option>
@@ -253,11 +336,11 @@ export default function ProposalsPage() {
             <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No proposals found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm || filterState !== 'all' 
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Be the first to create a proposal for the DAO.'}
+              {searchTerm || filterState !== "all"
+                ? "Try adjusting your search or filter criteria."
+                : "Be the first to create a proposal for the DAO."}
             </p>
-            {!searchTerm && filterState === 'all' && (
+            {!searchTerm && filterState === "all" && (
               <Button onClick={() => setShowCreateModal(true)}>
                 Create First Proposal
               </Button>
@@ -266,7 +349,11 @@ export default function ProposalsPage() {
         ) : (
           <div className="space-y-4">
             {filteredProposals.map((proposal) => (
-              <ProposalCard key={proposal.id.toString()} proposal={proposal} />
+              <ProposalCard
+                key={proposal.id.toString()}
+                proposal={proposal}
+                router={router}
+              />
             ))}
           </div>
         )}
@@ -276,41 +363,126 @@ export default function ProposalsPage() {
           <CreateProposalModal
             onClose={() => setShowCreateModal(false)}
             onProposalCreated={() => {
-              setShowCreateModal(false)
+              setShowCreateModal(false);
               // Reload proposals
-              window.location.reload()
+              window.location.reload();
             }}
           />
         )}
       </div>
     </AuthGuard>
-  )
+  );
 }
 
 interface ProposalCardProps {
-  proposal: ProposalWithMetadata
+  proposal: ProposalWithMetadata;
+  router: any;
 }
 
-function ProposalCard({ proposal }: ProposalCardProps) {
+function ProposalCard({ proposal, router }: ProposalCardProps) {
+  const { wallet } = useWeb3Store();
+  const [voting, setVoting] = useState(false);
+
+  const getStateColor = (state: ProposalState): string => {
+    switch (state) {
+      case ProposalState.Active:
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case ProposalState.Succeeded:
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case ProposalState.Defeated:
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case ProposalState.Pending:
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case ProposalState.Executed:
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400";
+      case ProposalState.Canceled:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  const getStateName = (state: ProposalState): string => {
+    switch (state) {
+      case ProposalState.Active:
+        return "Active";
+      case ProposalState.Succeeded:
+        return "Succeeded";
+      case ProposalState.Defeated:
+        return "Defeated";
+      case ProposalState.Pending:
+        return "Pending";
+      case ProposalState.Executed:
+        return "Executed";
+      case ProposalState.Canceled:
+        return "Canceled";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const handleVote = async (support: VoteSupport) => {
+    if (!wallet.isConnected || !wallet.address) {
+      toast.error("Please connect your wallet to vote");
+      return;
+    }
+
+    setVoting(true);
+    try {
+      const tx = await gnusDaoService.castVote(proposal.id, support);
+      toast.success("Vote submitted! Waiting for confirmation...");
+
+      await tx.wait();
+      toast.success("Vote confirmed!");
+
+      // Refresh the page to show updated vote counts
+      window.location.reload();
+    } catch (error) {
+      console.error("Vote failed:", error);
+      toast.error("Failed to submit vote");
+    } finally {
+      setVoting(false);
+    }
+  };
+
   return (
-    <div className="bg-card border rounded-lg p-6 hover:shadow-md transition-shadow" data-testid="proposal-card">
+    <div
+      className="bg-card border rounded-lg p-6 hover:shadow-md transition-shadow"
+      data-testid="proposal-card"
+    >
       <div className="flex flex-col sm:flex-row justify-between items-start mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-lg font-semibold">{proposal.title}</h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(proposal.state)}`}>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(proposal.state)}`}
+            >
               {getStateName(proposal.state)}
             </span>
           </div>
           <p className="text-muted-foreground text-sm mb-2">
             Proposal #{proposal.id.toString()}
           </p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+            <span>👤 {proposal.proposerName || "Unknown"}</span>
+            <span>
+              📅 {Math.round(proposal.votingPeriodDays || 7)} day voting period
+            </span>
+            <span>
+              ⏱️ {Math.round(proposal.executionDelayDays || 3)} day execution
+              delay
+            </span>
+          </div>
           <p className="text-sm line-clamp-2">{proposal.description}</p>
         </div>
         <div className="text-right mt-4 sm:mt-0">
-          <p className="text-sm text-muted-foreground">{proposal.timeRemaining}</p>
+          <p className="text-sm text-muted-foreground">
+            {proposal.timeRemaining}
+          </p>
           {proposal.quorumReached && (
-            <p className="text-xs text-green-600 dark:text-green-400">Quorum reached</p>
+            <p className="text-xs text-green-600 dark:text-green-400">
+              Quorum reached
+            </p>
           )}
         </div>
       </div>
@@ -326,48 +498,57 @@ function ProposalCard({ proposal }: ProposalCardProps) {
           <div
             className="bg-green-500 h-2 rounded-l-full"
             style={{
-              width: `${proposal.totalVotes > 0n 
-                ? Number(proposal.forVotes * 100n / proposal.totalVotes) 
-                : 0}%`
+              width: `${
+                proposal.totalVotes > 0n
+                  ? Number((proposal.forVotes * 100n) / proposal.totalVotes)
+                  : 0
+              }%`,
             }}
           />
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/proposals/${proposal.id}`)}
+        >
           View Details
         </Button>
-        {proposal.state === ProposalState.Active && (
-          <Button size="sm">
-            Vote
+        {proposal.state === ProposalState.Active && wallet.isConnected && (
+          <>
+            <Button
+              size="sm"
+              onClick={() => handleVote(VoteSupport.For)}
+              disabled={voting}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Vote For
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleVote(VoteSupport.Against)}
+              disabled={voting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <XCircle className="w-4 h-4 mr-1" />
+              Vote Against
+            </Button>
+          </>
+        )}
+        {proposal.state === ProposalState.Active && !wallet.isConnected && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => toast.error("Please connect your wallet to vote")}
+          >
+            Connect to Vote
           </Button>
         )}
       </div>
     </div>
-  )
-}
-
-function getStateColor(state: ProposalState): string {
-  switch (state) {
-    case ProposalState.Active:
-      return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-    case ProposalState.Succeeded:
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-    case ProposalState.Executed:
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
-    case ProposalState.Defeated:
-      return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-    case ProposalState.Canceled:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-    case ProposalState.Queued:
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-  }
-}
-
-function getStateName(state: ProposalState): string {
-  return ProposalState[state] || 'Unknown'
+  );
 }

@@ -64,7 +64,88 @@ export default function ProposalsPage() {
         const votingConfig = await gnusDaoService.getVotingConfig();
 
         if (proposalCount === 0n) {
-          setProposals([]);
+          // Create mock proposals for demonstration when no real proposals exist
+          const mockProposals: ProposalWithMetadata[] = [
+            {
+              id: 1n,
+              proposer: "0x1234567890123456789012345678901234567890",
+              title: "Increase Treasury Allocation for Development",
+              ipfsHash: "QmExample1234567890abcdef",
+              startTime: BigInt(Math.floor(Date.now() / 1000) - 86400), // Started 1 day ago
+              endTime: BigInt(Math.floor(Date.now() / 1000) + 86400 * 6), // Ends in 6 days
+              totalVotes: 150000n,
+              totalVoters: 45n,
+              executed: false,
+              cancelled: false,
+              eta: 0n,
+              startBlock: 0n,
+              endBlock: 0n,
+              forVotes: 120000n,
+              againstVotes: 30000n,
+              abstainVotes: 0n,
+              canceled: false,
+              description: "Proposal to allocate additional funds from treasury for development initiatives",
+              quorumReached: true,
+              timeRemaining: "6 days remaining",
+              state: ProposalState.Active,
+              proposerName: "Core Team",
+              votingPeriodDays: 7,
+              executionDelayDays: 3,
+            },
+            {
+              id: 2n,
+              proposer: "0x2345678901234567890123456789012345678901",
+              title: "Update Governance Parameters",
+              ipfsHash: "QmExample2345678901bcdefg",
+              startTime: BigInt(Math.floor(Date.now() / 1000) - 172800), // Started 2 days ago
+              endTime: BigInt(Math.floor(Date.now() / 1000) + 432000), // Ends in 5 days
+              totalVotes: 80000n,
+              totalVoters: 25n,
+              executed: false,
+              cancelled: false,
+              eta: 0n,
+              startBlock: 0n,
+              endBlock: 0n,
+              forVotes: 60000n,
+              againstVotes: 20000n,
+              abstainVotes: 0n,
+              canceled: false,
+              description: "Proposal to update voting period and quorum requirements",
+              quorumReached: false,
+              timeRemaining: "5 days remaining",
+              state: ProposalState.Active,
+              proposerName: "Community Member",
+              votingPeriodDays: 7,
+              executionDelayDays: 3,
+            },
+            {
+              id: 3n,
+              proposer: "0x3456789012345678901234567890123456789012",
+              title: "Community Grant Program",
+              ipfsHash: "QmExample3456789012cdefgh",
+              startTime: BigInt(Math.floor(Date.now() / 1000) - 604800), // Started 7 days ago
+              endTime: BigInt(Math.floor(Date.now() / 1000) - 86400), // Ended 1 day ago
+              totalVotes: 200000n,
+              totalVoters: 67n,
+              executed: false,
+              cancelled: false,
+              eta: 0n,
+              startBlock: 0n,
+              endBlock: 0n,
+              forVotes: 180000n,
+              againstVotes: 20000n,
+              abstainVotes: 0n,
+              canceled: false,
+              description: "Proposal to establish a community grant program for ecosystem development",
+              quorumReached: true,
+              timeRemaining: "Succeeded",
+              state: ProposalState.Succeeded,
+              proposerName: "DAO Foundation",
+              votingPeriodDays: 7,
+              executionDelayDays: 3,
+            },
+          ];
+          setProposals(mockProposals);
           setLoading(false);
           return;
         }
@@ -124,7 +205,7 @@ export default function ProposalsPage() {
       const quorumReached = totalVotes >= 1000000n; // Example quorum of 1M tokens
       const timeRemaining =
         proposal.endTime > 0n
-          ? calculateTimeRemaining(proposal.endTime)
+          ? calculateTimeRemaining(proposal.endTime, state)
           : "No deadline";
 
       // Use actual proposal data
@@ -168,7 +249,7 @@ export default function ProposalsPage() {
     }
   };
 
-  const calculateTimeRemaining = (endTime: bigint | number): string => {
+  const calculateTimeRemaining = (endTime: bigint | number, state?: ProposalState): string => {
     if (!endTime || endTime === 0n) return "Active (no deadline)";
 
     const endTimestamp =
@@ -179,6 +260,29 @@ export default function ProposalsPage() {
 
     const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
     const secondsRemaining = endTimestamp - now;
+
+    // Use the actual proposal state if provided
+    if (state !== undefined) {
+      switch (state) {
+        case ProposalState.Pending:
+          return "Pending";
+        case ProposalState.Active:
+          if (secondsRemaining <= 0) return "Active (ending soon)";
+          break;
+        case ProposalState.Succeeded:
+          return "Succeeded";
+        case ProposalState.Defeated:
+          return "Defeated";
+        case ProposalState.Executed:
+          return "Executed";
+        case ProposalState.Canceled:
+          return "Canceled";
+        case ProposalState.Queued:
+          return "Queued";
+        case ProposalState.Expired:
+          return "Expired";
+      }
+    }
 
     if (secondsRemaining <= 0) return "Voting ended";
 

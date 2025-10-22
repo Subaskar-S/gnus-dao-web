@@ -21,6 +21,8 @@ export function Header() {
     { name: "Governance", href: "/governance" },
     { name: "Treasury", href: "/treasury" },
     { name: "Analytics", href: "/analytics" },
+    { name: "History", href: "/history" },
+    { name: "Settings", href: "/settings" },
     { name: "Docs", href: "/docs" },
   ];
 

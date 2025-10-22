@@ -23,6 +23,12 @@
 # Analytics routes (SPA routing)
 /analytics/* /analytics 200
 
+# History routes (SPA routing)
+/history/* /history 200
+
+# Settings routes (SPA routing)
+/settings/* /settings 200
+
 # Documentation routes (SPA routing)
 /docs/* /docs 200
 

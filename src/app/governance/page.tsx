@@ -1,12 +1,11 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import GovernanceClient from "./GovernanceClient";
 
 export const metadata: Metadata = {
   title: "Governance",
-  description: "GNUS DAO governance and voting platform",
+  description: "GNUS DAO governance and voting platform - Manage delegation and view governance settings",
 };
 
 export default function GovernancePage() {
-  // Redirect to proposals page since governance is handled there
-  redirect("/proposals");
+  return <GovernanceClient />;
 }

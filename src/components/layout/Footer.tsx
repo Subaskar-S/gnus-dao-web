@@ -171,7 +171,7 @@ export function Footer() {
             <div className="mt-4 md:mt-0 flex items-center space-x-4 text-sm text-muted-foreground">
               <span>Built with ❤️ by Genius Ventures</span>
               <span>•</span>
-              <span>Powered by Diamond Pattern</span>
+              <span>Powered by Genius Ventures</span>
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ import { useWeb3Store } from "@/lib/web3/reduxProvider";
 import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
 import { formatAddress } from "@/lib/utils";
 import { toast } from "react-hot-toast";
+import { ProposeTreasuryActionModal } from "@/components/treasury/ProposeTreasuryActionModal";
 
 interface TreasuryAsset {
   address: string;
@@ -47,6 +48,7 @@ export default function TreasuryPage() {
   const [assets, setAssets] = useState<TreasuryAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showProposeModal, setShowProposeModal] = useState(false);
 
   useEffect(() => {
     loadTreasuryData();
@@ -237,7 +239,7 @@ export default function TreasuryPage() {
                     <p className="text-sm font-medium text-muted-foreground">
                       Native Balance
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold" data-testid="treasury-balance">
                       {treasuryStats
                         ? formatBalance(treasuryStats.nativeBalance, 18)
                         : "0"}
@@ -391,6 +393,7 @@ export default function TreasuryPage() {
                 <Button
                   variant="outline"
                   className="h-20 flex-col items-center gap-2"
+                  onClick={() => setShowProposeModal(true)}
                 >
                   <Send className="h-6 w-6" />
                   <span className="font-medium">Transfer Assets</span>
@@ -402,6 +405,7 @@ export default function TreasuryPage() {
                 <Button
                   variant="outline"
                   className="h-20 flex-col items-center gap-2"
+                  onClick={() => toast("Add asset tracking coming soon")}
                 >
                   <Plus className="h-6 w-6" />
                   <span className="font-medium">Add Asset</span>
@@ -424,6 +428,17 @@ export default function TreasuryPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Propose Treasury Action Modal */}
+        {showProposeModal && (
+          <ProposeTreasuryActionModal
+            onClose={() => setShowProposeModal(false)}
+            onActionProposed={() => {
+              setShowProposeModal(false);
+              handleRefresh();
+            }}
+          />
         )}
       </div>
     </AuthGuard>

@@ -2,23 +2,30 @@
 name = "gnus-dao-web"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "out"
 
 # Global environment variables
 [vars]
 CLOUDFLARE_PAGES = "true"
 NODE_ENV = "production"
 
-# KV namespace for IPFS caching and application data
+# KV namespace for authentication sessions
+[[kv_namespaces]]
+binding = "AUTH_SESSIONS"
+id = "669cfebda6a544e0a2a66b482a5b5e35"
+preview_id = "c03ccc431a3540be9dbbf3eade06dcc5"
+
+# KV namespace for IPFS caching
 [[kv_namespaces]]
 binding = "IPFS_CACHE"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
+id = "22f5c52a20ba44d3b060975e212f1e42"
+preview_id = "0779abda6db947c982834b4474a619df"
 
 # Additional KV for application state
 [[kv_namespaces]]
 binding = "APP_CACHE"
-id = "your-app-kv-namespace-id"
-preview_id = "your-preview-app-kv-namespace-id"
+id = "8e2dd1e6309844cbbce9a9ffa901d37e"
+preview_id = "6dfc2abf75cd4de99807c282c462bc8d"
 
 # Durable Objects for real-time features (future use)
 # [[durable_objects.bindings]]
@@ -30,43 +37,8 @@ preview_id = "your-preview-app-kv-namespace-id"
 # binding = "PROPOSAL_STORAGE"
 # bucket_name = "gnus-dao-proposals"
 
-[env.production]
-# Production environment configuration
-[env.production.vars]
-NODE_ENV = "production"
-STATIC_EXPORT = "true"
-CLOUDFLARE_PAGES = "true"
-USE_CLOUDFLARE_ADAPTER = "false"
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = "805f6520f2f2934352c65fe6bd70d15d"
-NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x57AE78C65F7Dd6d158DE9F4cA9CCeaA98C988199"
-NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
-
-[env.production-adapter]
-# Production with Cloudflare adapter (for SSR features)
-[env.production-adapter.vars]
-NODE_ENV = "production"
-STATIC_EXPORT = "false"
-CLOUDFLARE_PAGES = "true"
-USE_CLOUDFLARE_ADAPTER = "true"
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = "805f6520f2f2934352c65fe6bd70d15d"
-NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS = "0x57AE78C65F7Dd6d158DE9F4cA9CCeaA98C988199"
-NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING = "true"
-
-[env.preview]
-# Preview environment configuration
-[env.preview.vars]
-NODE_ENV = "development"
-STATIC_EXPORT = "true"
-CLOUDFLARE_PAGES = "true"
-USE_CLOUDFLARE_ADAPTER = "false"
-
-[env.preview-adapter]
-# Preview with adapter for testing SSR features
-[env.preview-adapter.vars]
-NODE_ENV = "development"
-STATIC_EXPORT = "false"
-CLOUDFLARE_PAGES = "true"
-USE_CLOUDFLARE_ADAPTER = "true"
+# Environment configurations removed to avoid conflicts
+# Set environment variables in Cloudflare Pages Dashboard instead
 
 # Build configuration for Cloudflare Pages
 # Note: These settings are configured in the Cloudflare Pages dashboard
@@ -74,33 +46,61 @@ USE_CLOUDFLARE_ADAPTER = "true"
 # Build output directory: out
 # Node.js version: 18
 
-# Environment variables for Cloudflare Pages dashboard:
+# ========================================
+# CLOUDFLARE PAGES ENVIRONMENT VARIABLES
+# ========================================
+# Set these in Cloudflare Pages Dashboard > Settings > Environment Variables
 #
-# Required:
+# PUBLIC VARIABLES (Safe to expose to client):
 # - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 # - NEXT_PUBLIC_ETHEREUM_RPC_URL
 # - NEXT_PUBLIC_BASE_RPC_URL
 # - NEXT_PUBLIC_POLYGON_RPC_URL
 # - NEXT_PUBLIC_SKALE_RPC_URL
+# - NEXT_PUBLIC_ARBITRUM_RPC_URL
+# - NEXT_PUBLIC_SEPOLIA_RPC_URL
+# - NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS
+# - NEXT_PUBLIC_ETHEREUM_GNUS_DAO_ADDRESS
+# - NEXT_PUBLIC_BASE_GNUS_DAO_ADDRESS
+# - NEXT_PUBLIC_POLYGON_GNUS_DAO_ADDRESS
+# - NEXT_PUBLIC_SKALE_GNUS_DAO_ADDRESS
+# - NEXT_PUBLIC_APP_NAME
+# - NEXT_PUBLIC_APP_URL
+# - NEXT_PUBLIC_APP_VERSION
+# - NEXT_PUBLIC_IPFS_GATEWAY
+# - NEXT_PUBLIC_IPFS_GATEWAY_BACKUP
 #
-# Contract addresses:
-# - NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS (testnet)
-# - NEXT_PUBLIC_MAINNET_GNUS_DAO_ADDRESS (mainnet)
-# - NEXT_PUBLIC_BASE_GNUS_DAO_ADDRESS (Base network)
-# - NEXT_PUBLIC_POLYGON_GNUS_DAO_ADDRESS (Polygon)
-# - NEXT_PUBLIC_SKALE_GNUS_DAO_ADDRESS (SKALE)
+# SENSITIVE VARIABLES (NEVER expose to client - Workers only):
+# ⚠️ CRITICAL: Set these as ENCRYPTED environment variables in Cloudflare
+# - PINATA_JWT (for IPFS uploads via Workers)
+# - PINATA_API_KEY (backup authentication)
+# - PINATA_SECRET_KEY (backup authentication)
+# - JWT_SECRET (for session token signing - generate with: openssl rand -base64 32)
 #
-# IPFS configuration:
-# - NEXT_PUBLIC_PINATA_API_KEY
-# - NEXT_PUBLIC_PINATA_SECRET_KEY
-# - NEXT_PUBLIC_PINATA_JWT
-# - PINATA_JWT (for worker functions)
-#
-# Optional:
+# OPTIONAL VARIABLES:
 # - NEXT_PUBLIC_ALCHEMY_API_KEY
 # - NEXT_PUBLIC_INFURA_API_KEY
 # - NEXT_PUBLIC_CLOUDFLARE_IMAGE_RESIZING
 # - NEXT_PUBLIC_ANALYTICS_ID
+#
+# ========================================
+# SETUP INSTRUCTIONS
+# ========================================
+# 1. Create KV Namespaces in Cloudflare Dashboard:
+#    - AUTH_SESSIONS (for SIWE session storage)
+#    - IPFS_CACHE (for IPFS content caching)
+#    - APP_CACHE (for application state)
+#
+# 2. Update KV namespace IDs in this file (lines 14-27)
+#
+# 3. Set environment variables in Cloudflare Pages Dashboard:
+#    Settings > Environment Variables > Production/Preview
+#
+# 4. Generate JWT_SECRET:
+#    openssl rand -base64 32
+#
+# 5. Deploy:
+#    wrangler pages deploy out --project-name=gnus-dao-web
 
 # Security headers and redirects are configured in:
 # - public/_headers (security headers)

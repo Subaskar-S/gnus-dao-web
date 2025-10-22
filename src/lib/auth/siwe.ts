@@ -23,12 +23,26 @@ export interface SiweAuthState {
 export class SiweAuthService {
   private static readonly STORAGE_KEY = "gnus-dao-siwe-session";
   private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+  private static readonly API_BASE_URL = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://gnus-dao-web.pages.dev';
 
   /**
-   * Generate a random nonce for SIWE message
+   * Generate a random nonce for SIWE message from backend
    */
-  static generateNonce(): string {
-    return ethers.hexlify(ethers.randomBytes(16));
+  static async generateNonce(): Promise<string> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/api/auth/nonce`);
+      if (!response.ok) {
+        throw new Error('Failed to generate nonce');
+      }
+      const data = await response.json();
+      return data.nonce;
+    } catch (error) {
+      console.error('Failed to fetch nonce from backend, using client-side generation:', error);
+      // Fallback to client-side generation
+      return ethers.hexlify(ethers.randomBytes(16));
+    }
   }
 
   /**
@@ -60,7 +74,7 @@ export class SiweAuthService {
   }
 
   /**
-   * Sign in with Ethereum using SIWE
+   * Sign in with Ethereum using SIWE with backend verification
    */
   static async signIn(
     signer: ethers.Signer,
@@ -68,41 +82,90 @@ export class SiweAuthService {
     chainId: number,
   ): Promise<SiweSession> {
     try {
-      // Generate nonce and create message
-      const nonce = this.generateNonce();
-      const message = this.createMessage(address, chainId, nonce);
+      // Ensure address is checksummed for SIWE
+      const checksummedAddress = ethers.getAddress(address);
+
+      // Generate nonce from backend
+      const nonce = await this.generateNonce();
+      const message = this.createMessage(checksummedAddress, chainId, nonce);
       const messageString = message.prepareMessage();
 
       // Sign the message
       const signature = await signer.signMessage(messageString);
 
-      // Verify the signature
-      const isValid = await this.verifySignature(
+      // Verify signature on backend
+      const verificationResult = await this.verifyWithBackend(
         messageString,
         signature,
-        address,
+        nonce,
       );
-      if (!isValid) {
-        throw new Error("Invalid signature");
+
+      if (!verificationResult.success) {
+        throw new Error("Backend verification failed");
       }
 
-      // Create session
+      // Create session from backend response
       const session: SiweSession = {
-        address,
-        chainId,
-        issuedAt: message.issuedAt!,
-        expirationTime: message.expirationTime!,
+        address: verificationResult.session.address,
+        chainId: verificationResult.session.chainId,
+        issuedAt: verificationResult.session.issuedAt,
+        expirationTime: verificationResult.session.expiresAt,
         nonce,
         signature,
         message: messageString,
       };
 
-      // Store session
+      // Store session and token
       this.storeSession(session);
+      if (verificationResult.token) {
+        localStorage.setItem('gnus-dao-auth-token', verificationResult.token);
+      }
 
       return session;
     } catch (error) {
       console.error("SIWE sign in failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify signature with backend
+   */
+  static async verifyWithBackend(
+    message: string,
+    signature: string,
+    nonce: string,
+    address?: string,
+    chainId?: number,
+  ): Promise<{ success: boolean; session?: any; token?: string }> {
+    try {
+      // Extract address and chainId from message if not provided
+      const siweMessage = new SiweMessage(message);
+      const msgAddress = address || siweMessage.address;
+      const msgChainId = chainId || siweMessage.chainId;
+
+      const response = await fetch(`${this.API_BASE_URL}/api/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          signature,
+          nonce,
+          address: msgAddress,
+          chainId: msgChainId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Verification failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Backend verification failed:', error);
       throw error;
     }
   }

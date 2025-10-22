@@ -51,12 +51,18 @@ const debug = (message: string, ...args: any[]) => {
 }
 
 /**
- * Initialize WalletConnect v2 with modern configuration
+ * Initialize WalletConnect with QR modal
  */
 export async function initializeWalletConnect() {
   if (typeof window === 'undefined') {
     debug('Window is undefined, skipping initialization')
     return null
+  }
+
+  // Return existing instance if already initialized
+  if (walletConnectProvider && isInitialized) {
+    debug('Using existing WalletConnect provider')
+    return walletConnectProvider
   }
 
   // Ensure runtime environment is loaded first
@@ -75,76 +81,60 @@ export async function initializeWalletConnect() {
     throw error
   }
 
-  // Return existing instance if already initialized and connected
-  if (walletConnectProvider && isInitialized && walletConnectProvider.connected) {
-    debug('Using existing connected provider')
-    return walletConnectProvider
-  }
-
   try {
-    debug('Initializing WalletConnect with validated configuration')
+    debug('Initializing WalletConnect with QR modal support')
 
-    // Clean up any existing provider
-    if (walletConnectProvider) {
-      try {
-        debug('Cleaning up existing provider')
-        await walletConnectProvider.disconnect()
-      } catch (e) {
-        debug('Error cleaning up existing provider:', e)
-      }
+    // Get the current domain for metadata
+    const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'https://gnus-dao-web.pages.dev'
+
+    // Use appropriate metadata based on environment
+    const metadata = {
+      name: 'GNUS DAO',
+      description: 'GNUS DAO Governance Platform - Decentralized Governance for the GNUS Ecosystem',
+      url: currentDomain,
+      icons: [`${currentDomain}/favicon.svg`]
     }
 
-    debug('Creating new EthereumProvider instance...')
+    debug('Using metadata:', metadata)
+    debug('Creating WalletConnect provider with QR modal...')
 
-    // Use a public/demo WalletConnect project ID that doesn't have domain restrictions
-    const publicProjectId = 'c4f79cc821944d9680842e34466bfbd'  // Public demo project ID
-    const fallbackProjectId = '2f5a1b8c3d4e5f6a7b8c9d0e1f2a3b4c'  // Alternative fallback
-
-    // Try multiple approaches to bypass domain restrictions
-    const projectIds = [publicProjectId, fallbackProjectId, projectId]
-
-    for (const tryProjectId of projectIds) {
-      try {
-        debug(`Trying WalletConnect with project ID: ${tryProjectId}`)
-
-        walletConnectProvider = await EthereumProvider.init({
-          projectId: tryProjectId,
-          chains: [11155111], // Sepolia testnet as primary
-          optionalChains: [1, 137, 42161, 8453], // Ethereum, Polygon, Arbitrum, Base
-          showQrModal: true,
-          metadata: {
-            name: 'GNUS DAO',
-            description: 'GNUS DAO Governance Platform',
-            url: 'https://app.uniswap.org', // Use a known working domain
-            icons: ['https://app.uniswap.org/favicon.ico']
-          },
-          qrModalOptions: {
-            themeMode: 'dark',
-            enableExplorer: true,
-            explorerRecommendedWalletIds: [
-              'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
-              'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase
-            ]
-          }
-        })
-
-        debug(`Successfully initialized WalletConnect with project ID: ${tryProjectId}`)
-        break // Success, exit loop
-
-      } catch (error) {
-        debug(`Failed with project ID ${tryProjectId}:`, error)
-        if (tryProjectId === projectIds[projectIds.length - 1]) {
-          // Last attempt failed, throw error
-          throw error
-        }
-        // Continue to next project ID
+    // Create WalletConnect provider with QR modal enabled
+    walletConnectProvider = await EthereumProvider.init({
+      projectId: projectId,
+      chains: [11155111], // Sepolia testnet as primary
+      optionalChains: [1, 137, 42161, 8453, 10], // Ethereum, Polygon, Arbitrum, Base, Optimism
+      showQrModal: true, // Enable QR modal
+      metadata: metadata,
+      qrModalOptions: {
+        themeMode: 'dark',
+        themeVariables: {
+          '--wcm-z-index': '999999',
+          '--wcm-overlay-background-color': 'rgba(0, 0, 0, 0.95)',
+          '--wcm-overlay-backdrop-filter': 'blur(8px)',
+          '--wcm-background-color': '#1a1a1a',
+          '--wcm-accent-color': '#3b82f6'
+        },
+        enableExplorer: true,
+        explorerRecommendedWalletIds: [
+          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+          'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase Wallet
+          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
+          '38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662', // Bitget Wallet
+        ]
+      },
+      rpcMap: {
+        1: 'https://eth.llamarpc.com',
+        10: 'https://mainnet.optimism.io',
+        137: 'https://polygon.llamarpc.com',
+        8453: 'https://mainnet.base.org',
+        42161: 'https://arb1.arbitrum.io/rpc',
+        11155111: 'https://sepolia.infura.io/v3/a9555646b9fb4da6ab4cc08c782f85ee'
       }
-    }
+    })
 
-    debug('Provider initialized successfully')
-    debug('Provider showQrModal setting:', walletConnectProvider.modal !== undefined)
-    debug('Provider project ID:', projectId)
-    debug('Provider chains:', walletConnectProvider.chains)
+    debug('WalletConnect provider created successfully')
+    debug('Provider modal available:', !!walletConnectProvider.modal)
+    debug('Provider showQrModal setting:', walletConnectProvider.modal?.showQrModal)
 
     isInitialized = true
     return walletConnectProvider
@@ -164,87 +154,38 @@ export function getWalletConnectProvider() {
 }
 
 /**
- * Open the WalletConnect modal
+ * Open the WalletConnect modal with QR code
  */
 export async function openWalletConnect() {
   try {
-    debug('Opening modal...')
+    debug('Opening WalletConnect modal...')
 
     const provider = await initializeWalletConnect()
     if (!provider) {
       throw new Error('Failed to initialize WalletConnect provider')
     }
 
-    debug('Provider initialized, checking connection state...')
-    debug('Provider connected:', provider.connected)
-    debug('Provider accounts:', provider.accounts)
-    debug('Provider chainId:', provider.chainId)
-
-    // If already connected, return the provider
-    if (provider.connected && provider.accounts?.length > 0) {
-      debug('Already connected, returning existing connection')
-      return provider
-    }
-
-    debug('Enabling provider (this should show the QR modal)...')
-    debug('Provider showQrModal setting should be true')
+    debug('Provider initialized, checking modal availability...')
+    debug('Provider modal:', !!provider.modal)
+    debug('Provider showQrModal:', provider.modal?.showQrModal)
 
     // Enable the provider (this will show the QR modal)
-    try {
-      debug('Calling provider.enable() to show modal...')
-      const accounts = await provider.enable()
-      debug('Provider enabled successfully, accounts:', accounts)
+    debug('Calling provider.enable() to show QR modal...')
+    const accounts = await provider.enable()
+    
+    debug('Provider enabled, accounts:', accounts)
 
-      if (accounts && accounts.length > 0) {
-        debug('WalletConnect connection successful with accounts:', accounts)
-        return { provider, accounts }
-      }
-
-      debug('No accounts returned from enable, checking provider state...')
-      // Check if provider is connected but accounts not returned
-      if (provider.connected && provider.accounts && provider.accounts.length > 0) {
-        debug('Provider connected with accounts in state:', provider.accounts)
-        return { provider, accounts: provider.accounts }
-      }
-
-      debug('Trying alternative connection method...')
-      // Try alternative connection method
-      await provider.connect()
-      if (provider.accounts && provider.accounts.length > 0) {
-        debug('Alternative connection successful, accounts:', provider.accounts)
-        return { provider, accounts: provider.accounts }
-      }
-    } catch (enableError) {
-      debug('Enable failed, error details:', enableError)
-
-      // Check if it's a user rejection (not an error)
-      if (enableError instanceof Error && enableError.message.includes('User rejected')) {
-        debug('User rejected the connection request')
-        throw new Error('Connection cancelled by user')
-      }
-
-      // Fallback to connect method
-      try {
-        debug('Trying fallback connect method...')
-        await provider.connect()
-        if (provider.accounts && provider.accounts.length > 0) {
-          debug('Connect method successful, accounts:', provider.accounts)
-          return { provider, accounts: provider.accounts }
-        }
-      } catch (connectError) {
-        debug('Connect method also failed:', connectError)
-        throw new Error(`WalletConnect connection failed: ${enableError instanceof Error ? enableError.message : 'Unknown error'}`)
+    if (accounts && accounts.length > 0) {
+      debug('WalletConnect connection successful')
+      return {
+        provider: provider,
+        accounts: accounts
       }
     }
 
     throw new Error('No accounts returned from WalletConnect')
   } catch (error) {
-    debug('Failed to open WalletConnect:', error)
-
-    // Reset provider state on error
-    walletConnectProvider = null
-    isInitialized = false
-
+    debug('Failed to open WalletConnect modal:', error)
     throw error
   }
 }
@@ -334,5 +275,31 @@ export function subscribeToWalletConnect(callback: (event: string, data: any) =>
     events.forEach(event => {
       walletConnectProvider.removeAllListeners(event)
     })
+  }
+}
+
+/**
+ * Validate QR code contains valid WalletConnect URI
+ */
+export function validateWalletConnectQR(qrData: string): boolean {
+  try {
+    // WalletConnect URIs start with 'wc:' followed by topic and other parameters
+    if (!qrData.startsWith('wc:')) {
+      debug('QR code does not contain WalletConnect URI')
+      return false
+    }
+
+    // Basic validation of WalletConnect URI format
+    const uri = new URL(qrData)
+    if (uri.protocol !== 'wc:') {
+      debug('Invalid WalletConnect URI protocol')
+      return false
+    }
+
+    debug('QR code contains valid WalletConnect URI')
+    return true
+  } catch (error) {
+    debug('Error validating QR code:', error)
+    return false
   }
 }

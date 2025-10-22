@@ -37,47 +37,98 @@ export function QuadraticVotingModal({
   const [votingPower, setVotingPower] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [userCredits, setUserCredits] = useState<bigint>(0n);
+  const [tokenBalance, setTokenBalance] = useState<bigint>(0n);
+  const [maxVotesPerWallet, setMaxVotesPerWallet] = useState<bigint>(0n);
+  const [validationResult, setValidationResult] = useState<{valid: boolean; cost: bigint} | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     loadUserCredits();
+    loadVotingConfig();
   }, [wallet.address]);
 
   useEffect(() => {
     // Calculate quadratic voting power: sqrt(credits)
     setVotingPower(Math.floor(Math.sqrt(creditsToSpend)));
-  }, [creditsToSpend]);
+
+    // Validate vote when credits change
+    validateVoteAmount();
+  }, [creditsToSpend, tokenBalance, maxVotesPerWallet]);
 
   const loadUserCredits = async () => {
     if (!wallet.address) return;
 
     try {
-      const credits = await gnusDaoService.getVoteCredits(wallet.address);
-      setUserCredits(credits);
+      // Get token balance instead of vote credits
+      const balance = await gnusDaoService.getTokenBalance(wallet.address);
+      setUserCredits(balance);
+      setTokenBalance(balance);
     } catch (error) {
-      console.error("Failed to load vote credits:", error);
+      console.error("Failed to load token balance:", error);
+    }
+  };
+
+  const loadVotingConfig = async () => {
+    try {
+      const config = await gnusDaoService.getVotingConfig();
+      if (config) {
+        setMaxVotesPerWallet(config.maxVotesPerWallet);
+      }
+    } catch (error) {
+      console.error("Failed to load voting config:", error);
+    }
+  };
+
+  const validateVoteAmount = async () => {
+    if (!wallet.address || creditsToSpend <= 0) {
+      setValidationResult(null);
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const result = await gnusDaoService.validateVote(
+        BigInt(votingPower),
+        maxVotesPerWallet,
+        tokenBalance
+      );
+      setValidationResult(result);
+    } catch (error) {
+      console.error("Failed to validate vote:", error);
+      setValidationResult({ valid: false, cost: 0n });
+    } finally {
+      setIsValidating(false);
     }
   };
 
   const handleVote = async () => {
     if (selectedSupport === null || !wallet.address) return;
 
+    // Check validation before submitting
+    if (validationResult && !validationResult.valid) {
+      toast.error("Invalid vote amount");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const tx = await gnusDaoService.castQuadraticVote(
+      // Cast vote with the calculated voting power (number of votes)
+      // The contract will calculate the quadratic cost internally
+      const tx = await gnusDaoService.castVote(
         proposalId,
         selectedSupport,
-        BigInt(creditsToSpend),
+        BigInt(votingPower), // Pass the number of votes (not credits)
       );
 
-      toast.success("Quadratic vote submitted! Waiting for confirmation...");
+      toast.success("Vote submitted! Waiting for confirmation...");
       await tx.wait();
       toast.success("Vote confirmed!");
 
       onVoteSubmitted();
       onClose();
     } catch (error) {
-      console.error("Failed to submit quadratic vote:", error);
+      console.error("Failed to submit vote:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to submit vote",
       );
@@ -170,7 +221,7 @@ export function QuadraticVotingModal({
         {/* Vote Credits Status */}
         <div className="bg-card border rounded-lg p-4 mb-6">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-medium">Available Vote Credits</span>
+            <span className="font-medium">Available Token Balance</span>
             <span className="text-lg font-bold">{userCredits.toString()}</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -182,10 +233,53 @@ export function QuadraticVotingModal({
             />
           </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Using: {creditsToSpend}</span>
-            <span>Remaining: {Number(userCredits) - creditsToSpend}</span>
+            <span>Voting Power: {votingPower}</span>
+            <span>Max Votes: {maxVotesPerWallet.toString()}</span>
           </div>
         </div>
+
+        {/* Vote Validation Status */}
+        {validationResult && (
+          <div className={`p-4 rounded-lg mb-6 ${
+            validationResult.valid
+              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              {validationResult.valid ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <p className={`font-medium ${
+                  validationResult.valid
+                    ? 'text-green-800 dark:text-green-200'
+                    : 'text-red-800 dark:text-red-200'
+                }`}>
+                  {validationResult.valid ? 'Vote is valid' : 'Vote is invalid'}
+                </p>
+                <p className={`text-sm mt-1 ${
+                  validationResult.valid
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {validationResult.valid
+                    ? `Estimated cost: ${validationResult.cost.toString()} tokens`
+                    : 'Voting power exceeds maximum allowed or insufficient balance'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isValidating && (
+          <div className="flex items-center justify-center gap-2 p-4 mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-sm text-blue-700 dark:text-blue-300">Validating vote...</span>
+          </div>
+        )}
 
         {/* Vote Options */}
         <div className="space-y-3 mb-6">

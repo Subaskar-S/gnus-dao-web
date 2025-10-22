@@ -113,39 +113,40 @@ export const walletConnectConnector: WalletConnector = {
       console.log('[WalletConnect] Ensuring runtime environment is loaded...')
       await getRuntimeEnv() // This will load the environment if not already loaded
 
-      // Use WalletConnect v2 provider with built-in modal
+      // Use Reown AppKit with official WalletConnect modal
       const { openWalletConnect } = await import('@/lib/web3/appkit')
 
-      // Open WalletConnect modal and connect
+      console.log('[WalletConnect] Opening modal and connecting...')
+
+      // Connect using the provider (this shows the official WalletConnect modal)
       const result = await openWalletConnect()
-      if (!result) {
-        throw new Error('Failed to initialize WalletConnect provider')
+
+      if (!result || !result.accounts || result.accounts.length === 0) {
+        throw new Error('No accounts returned from WalletConnect')
       }
 
-      // The result should be { provider, accounts }
-      const { provider, accounts } = result
-
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts available from WalletConnect')
-      }
+      console.log('[WalletConnect] Connected successfully:', result.accounts[0])
 
       // Create ethers provider from WalletConnect provider
-      const ethersProvider = new ethers.BrowserProvider(provider)
+      const ethersProvider = new ethers.BrowserProvider(result.provider)
       const network = await ethersProvider.getNetwork()
 
-      const connectionResult = {
+      return {
         provider: ethersProvider,
-        address: accounts[0],
+        address: result.accounts[0],
         chainId: Number(network.chainId),
+      }
+    } catch (error) {
+      // Close the QR modal on error
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('walletconnect-error', {
+          detail: { error: error instanceof Error ? error.message : 'Unknown error' }
+        }))
       }
 
       if (process.env.NODE_ENV === 'development') {
-        }
-
-      return connectionResult
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        }
+        console.error('[WalletConnect] Connection failed:', error)
+      }
       throw new Error(`Failed to connect with WalletConnect: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   },

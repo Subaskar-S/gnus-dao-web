@@ -16,9 +16,10 @@ import { Button } from "@/components/ui/Button";
 import { useWeb3Store } from "@/lib/web3/reduxProvider";
 import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
 import { toast } from "react-hot-toast";
-import { clientIPFSService } from "@/lib/ipfs/client";
+import { SecureIPFSService } from "@/lib/ipfs/secureUpload";
 import type { ProposalMetadata, IPFSUploadResult } from "@/lib/ipfs/types";
 import { FileUpload } from "@/components/ipfs/FileUpload";
+import { useSiweProtectedAction } from "@/components/auth/SiweGuard";
 
 interface CreateProposalModalProps {
   onClose: () => void;
@@ -37,6 +38,7 @@ export function CreateProposalModal({
   onProposalCreated,
 }: CreateProposalModalProps) {
   const { wallet, provider, signer, tokenBalance } = useWeb3Store();
+  const { executeProtected } = useSiweProtectedAction();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<
     "basic" | "actions" | "attachments" | "review"
@@ -142,29 +144,28 @@ export function CreateProposalModal({
     setUploadProgress(0);
 
     try {
-      const uploadPromises = Array.from(files).map((file) =>
-        clientIPFSService.uploadFile(file, {
-          pin: true,
-          metadata: {
-            name: `Proposal attachment: ${file.name}`,
-            keyvalues: {
-              type: "proposal-attachment",
-              proposalTitle: title,
-              uploadedBy: wallet.address,
-            },
-          },
-          onProgress: (progress) => {
-            setUploadProgress(progress);
-          },
-        }),
-      );
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const result = await SecureIPFSService.uploadProposalAttachment(file);
+        if (!result.success) {
+          throw new Error(result.error || "Upload failed");
+        }
+        // Convert to IPFSUploadResult format
+        return {
+          hash: result.ipfsHash || "",
+          name: file.name,
+          size: result.pinSize || file.size,
+          url: SecureIPFSService.getGatewayUrl(result.ipfsHash || ""),
+        };
+      });
 
       const results = await Promise.all(uploadPromises);
       setAttachments([...attachments, ...results]);
       toast.success(`${results.length} file(s) uploaded successfully`);
     } catch (error) {
       console.error("File upload failed:", error);
-      toast.error("Failed to upload files");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload files"
+      );
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -201,6 +202,26 @@ export function CreateProposalModal({
     }
 
     try {
+      // Execute with SIWE protection
+      await executeProtected(
+        async () => {
+          await submitProposal();
+        },
+        {
+          requireAuth: true,
+          errorMessage: "You must sign in with Ethereum to create proposals",
+        }
+      );
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit proposal"
+      );
+    }
+  };
+
+  const submitProposal = async () => {
+    try {
       setLoading(true);
 
       // Ensure DAO service is initialized with wallet provider and signer
@@ -222,7 +243,7 @@ export function CreateProposalModal({
           );
         }
       } catch (initError) {
-        console.error("❌ Failed to initialize DAO service:", initError);
+        console.error("Failed to initialize DAO service:", initError);
         toast.error(
           `Failed to initialize blockchain connection: ${initError instanceof Error ? initError.message : "Unknown error"}`,
         );
@@ -247,17 +268,20 @@ export function CreateProposalModal({
         executionDelay: executionDelayDays,
       };
 
-      // Upload metadata to IPFS
+      // Upload metadata to IPFS using secure service
       let metadataHash = "";
       try {
         const metadataResult =
-          await clientIPFSService.uploadProposalMetadata(proposalMetadata);
-        metadataHash = metadataResult.hash;
-        toast.success(
-          `Proposal metadata uploaded to IPFS: ${metadataHash.slice(0, 12)}...`,
-        );
+          await SecureIPFSService.uploadProposalMetadata(proposalMetadata);
+
+        if (!metadataResult.success) {
+          throw new Error(metadataResult.error || "Metadata upload failed");
+        }
+
+        metadataHash = metadataResult.ipfsHash || "";
+        toast.success("Proposal metadata uploaded to IPFS");
       } catch (error) {
-        console.error("❌ Failed to upload metadata to IPFS:", error);
+        console.error("Failed to upload metadata to IPFS:", error);
         toast.error(
           `IPFS upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
@@ -273,16 +297,12 @@ export function CreateProposalModal({
           ipfsHashForContract,
         );
 
-        toast.success(
-          `Proposal submitted! Transaction: ${tx.hash.slice(0, 12)}...`,
-        );
+        toast.success("Proposal submitted! Waiting for confirmation...");
 
         const receipt = await tx.wait();
 
         if (receipt) {
-          toast.success(
-            `Proposal created successfully! Gas used: ${receipt.gasUsed.toString()}`,
-          );
+          toast.success("Proposal created successfully!");
         } else {
           toast.success("Proposal created successfully!");
         }
@@ -290,7 +310,7 @@ export function CreateProposalModal({
         onProposalCreated();
         onClose();
       } catch (txError) {
-        console.error("❌ Blockchain transaction failed:", txError);
+        console.error("Blockchain transaction failed:", txError);
         throw txError;
       }
     } catch (error) {

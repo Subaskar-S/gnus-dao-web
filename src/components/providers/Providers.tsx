@@ -28,35 +28,8 @@ interface ProvidersProps {
 }
 
 function WalletConnectInitializer() {
-  useEffect(() => {
-    // Lazy initialize WalletConnect only when needed
-    if (typeof window !== 'undefined') {
-      // Use requestIdleCallback for better performance
-      const initializeWhenIdle = () => {
-        import('@/lib/web3/appkit').then(({ initializeWalletConnect }) => {
-          initializeWalletConnect().then(provider => {
-            if (process.env.NODE_ENV === 'development') {
-              if (provider) {
-                console.log('✅ WalletConnect initialized successfully')
-              } else {
-                console.warn('⚠️ WalletConnect initialization skipped')
-              }
-            }
-          })
-        }).catch(error => {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ WalletConnect initialization failed:', error)
-          }
-        })
-      }
-
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(initializeWhenIdle, { timeout: 5000 })
-      } else {
-        setTimeout(initializeWhenIdle, 1000)
-      }
-    }
-  }, [])
+  // WalletConnect will be initialized on-demand when user clicks Connect Wallet
+  // No need for automatic initialization to avoid conflicts and improve performance
 
   return null
 }

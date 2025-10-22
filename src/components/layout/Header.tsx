@@ -4,18 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/Button";
-import { WalletStatus } from "@/components/wallet/ConnectWalletButton";
+import { ConnectWalletButton } from "@/components/wallet/ConnectWalletButton";
+import { WalletDropdown } from "@/components/wallet/WalletDropdown";
 import { NetworkSelector } from "@/components/wallet/NetworkSelector";
-import { AuthButton } from "@/components/auth/AuthButton";
 import { cn } from "@/lib/utils";
 import { Menu, X, Sun, Moon, Zap } from "lucide-react";
+import { useWeb3Store } from "@/lib/web3/reduxProvider";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { wallet } = useWeb3Store();
 
   const navigation = [
     { name: "Proposals", href: "/proposals" },
+    { name: "Governance", href: "/governance" },
     { name: "Treasury", href: "/treasury" },
     { name: "Analytics", href: "/analytics" },
     { name: "Docs", href: "/docs" },
@@ -61,8 +64,11 @@ export function Header() {
               <span className="sr-only">Toggle theme</span>
             </Button>
             <NetworkSelector variant="outline" size="sm" />
-            <AuthButton variant="outline" size="sm" showStatus={false} />
-            <WalletStatus compact={true} />
+            {wallet.isConnected ? (
+              <WalletDropdown />
+            ) : (
+              <ConnectWalletButton variant="outline" size="sm" />
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -111,8 +117,11 @@ export function Header() {
               </div>
               <div className="px-3 py-2 space-y-2">
                 <NetworkSelector variant="outline" size="sm" />
-                <AuthButton variant="outline" size="sm" showStatus={false} />
-                <WalletStatus compact={true} />
+                {wallet.isConnected ? (
+                  <WalletDropdown className="w-full" />
+                ) : (
+                  <ConnectWalletButton variant="outline" size="sm" className="w-full" />
+                )}
               </div>
             </div>
           </div>

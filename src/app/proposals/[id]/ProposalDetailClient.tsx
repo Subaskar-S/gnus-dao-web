@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Copy,
   Vote,
+  Play,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AuthGuard } from "@/components/auth/AuthButton";
@@ -43,6 +45,10 @@ export default function ProposalDetailClient() {
   const [voting, setVoting] = useState(false);
   const [userVote, setUserVote] = useState<VoteReceipt | null>(null);
   const [showQuadraticModal, setShowQuadraticModal] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [canExecute, setCanExecute] = useState(false);
+  const [canCancel, setCanCancel] = useState(false);
 
   const proposalId = params.id as string;
 
@@ -60,13 +66,12 @@ export default function ProposalDetailClient() {
     return `${daysRemaining} days remaining`;
   };
 
-  // Load proposal data
-  useEffect(() => {
-    const loadProposal = async () => {
-      if (!proposalId) {
-        setLoading(false);
-        return;
-      }
+  // Load proposal data function
+  const loadProposal = async () => {
+    if (!proposalId) {
+      setLoading(false);
+      return;
+    }
 
       // Initialize service if not already done
       if (!gnusDaoInitialized && provider && signer) {
@@ -86,9 +91,10 @@ export default function ProposalDetailClient() {
 
       try {
         const id = BigInt(proposalId);
-        const [proposalData, state] = await Promise.all([
+        const [proposalData, state, votingConfig] = await Promise.all([
           gnusDaoService.getProposal(id),
           gnusDaoService.getProposalState(id),
+          gnusDaoService.getVotingConfig(),
         ]);
 
         if (proposalData) {
@@ -97,7 +103,21 @@ export default function ProposalDetailClient() {
             proposalData.forVotes +
             proposalData.againstVotes +
             proposalData.abstainVotes;
-          const quorumReached = totalVotes >= 1000000n; // Example quorum
+
+          // Get actual quorum threshold from voting config
+          const quorumThreshold = votingConfig?.quorumThreshold
+            ? BigInt(votingConfig.quorumThreshold)
+            : 0n;
+
+          // Only mark quorum as reached if:
+          // 1. There are actual votes (totalVotes > 0)
+          // 2. The votes meet or exceed the threshold
+          // 3. The proposal is not in Pending state (voting has started)
+          const quorumReached =
+            totalVotes > 0n &&
+            totalVotes >= quorumThreshold &&
+            state !== ProposalState.Pending;
+
           const timeRemaining = calculateTimeRemaining(proposalData.endBlock);
 
           // Create meaningful title and description based on proposal data
@@ -164,10 +184,77 @@ export default function ProposalDetailClient() {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  // Load proposal data on mount and when dependencies change
+  useEffect(() => {
     loadProposal();
   }, [gnusDaoInitialized, proposalId, wallet.address]);
+
+  // Check if user can execute or cancel proposal
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (!wallet.address || !proposal) return;
+
+      try {
+        // Can execute if proposal succeeded
+        setCanExecute(proposal.state === ProposalState.Succeeded);
+
+        // Can cancel if user is proposer or owner
+        const owner = await gnusDaoService.getOwner();
+        const isProposer = proposal.proposer.toLowerCase() === wallet.address.toLowerCase();
+        const isOwner = owner.toLowerCase() === wallet.address.toLowerCase();
+        setCanCancel((isProposer || isOwner) &&
+          (proposal.state === ProposalState.Pending || proposal.state === ProposalState.Active));
+      } catch (error) {
+        console.error("Error checking permissions:", error);
+      }
+    };
+
+    checkPermissions();
+  }, [wallet.address, proposal]);
+
+  const handleExecute = async () => {
+    if (!proposal) return;
+
+    setIsExecuting(true);
+    try {
+      const tx = await gnusDaoService.executeProposal(BigInt(proposalId));
+      toast.success("Executing proposal...");
+
+      await tx.wait();
+      toast.success("Proposal executed successfully!");
+
+      // Reload proposal data
+      loadProposal();
+    } catch (error: any) {
+      console.error("Execution failed:", error);
+      toast.error(error.message || "Failed to execute proposal");
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!proposal) return;
+
+    setIsCanceling(true);
+    try {
+      const tx = await gnusDaoService.cancelProposal(BigInt(proposalId));
+      toast.success("Canceling proposal...");
+
+      await tx.wait();
+      toast.success("Proposal canceled successfully!");
+
+      // Reload proposal data
+      loadProposal();
+    } catch (error: any) {
+      console.error("Cancellation failed:", error);
+      toast.error(error.message || "Failed to cancel proposal");
+    } finally {
+      setIsCanceling(false);
+    }
+  };
 
   const handleVote = async (support: VoteSupport) => {
     if (!proposal || !wallet.address) return;
@@ -408,10 +495,60 @@ export default function ProposalDetailClient() {
             </div>
           </div>
 
+          {/* Proposal Actions - Execute/Cancel */}
+          {wallet.isConnected && (canExecute || canCancel) && (
+            <div className="p-8 border-t border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Proposal Actions
+              </h2>
+              <div className="flex gap-4">
+                {canExecute && (
+                  <Button
+                    onClick={handleExecute}
+                    disabled={isExecuting}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {isExecuting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Executing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Execute Proposal
+                      </>
+                    )}
+                  </Button>
+                )}
+                {canCancel && (
+                  <Button
+                    onClick={handleCancel}
+                    disabled={isCanceling}
+                    variant="outline"
+                    className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    {isCanceling ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Canceling...
+                      </>
+                    ) : (
+                      <>
+                        <Ban className="w-4 h-4 mr-2" />
+                        Cancel Proposal
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Voting Actions */}
           {(wallet.isConnected || true) &&
             proposal.state === ProposalState.Active && (
-              <div className="p-8">
+              <div className="p-8 border-t border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Cast Your Vote
                 </h2>

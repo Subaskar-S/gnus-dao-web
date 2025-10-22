@@ -98,17 +98,17 @@ src/
 ```bash
 # Development
 yarn dev                    # Start development server (port 3000)
+yarn dev:turbo             # Start development server with Turbopack
 
 # Building
 yarn build                 # Standard Next.js build
-yarn build:static          # Static export build
-yarn build:hybrid          # Hybrid build for Cloudflare Pages
-yarn build:production      # Production build with optimizations
+yarn build:production      # Production build with optimizations for Cloudflare Pages
 
 # Testing
 yarn test                  # Run unit tests
 yarn test:coverage         # Run tests with coverage
 yarn test:e2e             # Run Playwright end-to-end tests
+yarn test:e2e:ui          # Run Playwright tests with UI
 yarn validate             # Run type-check + lint + tests
 
 # Code Quality
@@ -118,7 +118,12 @@ yarn type-check           # TypeScript type checking
 yarn format               # Format code with Prettier
 
 # Deployment
+yarn deploy:prepare        # Build for production
 yarn deploy:cloudflare     # Deploy to Cloudflare Pages
+
+# Maintenance
+yarn clean                 # Clean build artifacts
+yarn clean:all            # Clean everything including node_modules
 ```
 
 ### Testing Strategy
@@ -143,14 +148,14 @@ The project includes comprehensive testing:
 
 ### Cloudflare Pages (Production)
 
-The project is optimized for Cloudflare Pages deployment with hybrid functionality:
+The project is optimized for Cloudflare Pages deployment:
 
 ```bash
-# Build for Cloudflare Pages
-yarn build:hybrid
+# Build for production
+yarn build:production
 
 # Deploy using Wrangler CLI
-wrangler pages deploy out --project-name=gnus-dao-web
+yarn deploy:cloudflare
 ```
 
 **Live Deployment**: https://gnus-dao-web.pages.dev

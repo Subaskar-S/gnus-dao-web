@@ -48,10 +48,6 @@ jobs:
       - name: 🔍 TypeScript Type Check
         run: yarn type-check
 
-      - name: 🧹 Fix Linting Issues
-        run: node scripts/targeted-lint-fix.js
-        continue-on-error: true
-
       - name: ✨ ESLint Check
         run: yarn lint --max-warnings 10
 
@@ -93,10 +89,6 @@ jobs:
       - name: 📚 Install Dependencies
         run: yarn install --immutable
 
-      - name: 🧹 Fix Linting Issues
-        run: node scripts/targeted-lint-fix.js
-        continue-on-error: true
-
       - name: 🏗️ Build for Production
         env:
           NODE_ENV: production
@@ -105,12 +97,10 @@ jobs:
           NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID }}
           NEXT_PUBLIC_SEPOLIA_RPC_URL: ${{ secrets.NEXT_PUBLIC_SEPOLIA_RPC_URL }}
           NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS: ${{ secrets.NEXT_PUBLIC_SEPOLIA_GNUS_DAO_ADDRESS }}
-          NEXT_PUBLIC_PINATA_API_KEY: ${{ secrets.NEXT_PUBLIC_PINATA_API_KEY }}
-          NEXT_PUBLIC_PINATA_SECRET_KEY: ${{ secrets.NEXT_PUBLIC_PINATA_SECRET_KEY }}
           NEXT_PUBLIC_PINATA_JWT: ${{ secrets.NEXT_PUBLIC_PINATA_JWT }}
         run: |
           echo "🚀 Building GNUS DAO Platform for production..."
-          yarn build:hybrid
+          yarn build:production
 
       - name: 🔍 Validate Build Output
         run: |
@@ -121,7 +111,6 @@ jobs:
           test -f out/_redirects && echo "✅ _redirects" || echo "❌ _redirects missing"
           test -f out/_headers && echo "✅ _headers" || echo "❌ _headers missing"
           test -d out/_next && echo "✅ _next directory" || echo "❌ _next directory missing"
-          test -f out/runtime-config.json && echo "✅ runtime-config.json" || echo "❌ runtime-config.json missing"
           echo "📦 Build size:"
           du -sh out/
 
@@ -168,9 +157,10 @@ jobs:
         env:
           NODE_ENV: production
           STATIC_EXPORT: true
+          CLOUDFLARE_PAGES: true
         run: |
           echo "🔍 Building preview deployment..."
-          node scripts/build-cloudflare.js
+          yarn build:production
 
       - name: Deploy Preview to Cloudflare Pages
         uses: cloudflare/pages-action@v1

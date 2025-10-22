@@ -44,6 +44,9 @@
       ],
       "@/utils/*": [
         "./src/lib/utils/*"
+      ],
+      "@/typechain-types/*": [
+        "./typechain-types/*"
       ]
     },
     "forceConsistentCasingInFileNames": true,
@@ -64,7 +67,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "out/types/**/*.ts"
+    "out/types/**/*.ts",
+    "typechain-types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

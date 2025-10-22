@@ -1,16 +1,21 @@
 import { ethers } from "ethers";
-import { GNUS_DAO_DIAMOND_ABI, GNUSDAODiamondInterface } from "./abi";
 import { getGNUSDAOContract, ProposalState, VoteSupport } from "./gnusDao";
 import { logger } from "@/lib/utils/logger";
 import type {
   Proposal,
   VoteReceipt,
-  QuadraticVoteReceipt,
   Facet,
 } from "./gnusDao";
+import { GNUSDAOGovernanceFacet__factory } from "../../../typechain-types/factories/contracts/gnus-dao";
+import type { GNUSDAOGovernanceFacet } from "../../../typechain-types/contracts/gnus-dao";
+import type { GNUSDAOVotingMechanismsFacet } from "../../../typechain-types/contracts/gnus-dao";
+import type { GNUSDAOGovernanceTokenFacet } from "../../../typechain-types/contracts/gnus-dao";
+
+// Combined interface for the Diamond contract that includes all facets
+type GNUSDAODiamond = GNUSDAOGovernanceFacet & GNUSDAOVotingMechanismsFacet & GNUSDAOGovernanceTokenFacet;
 
 export class GNUSDAOService {
-  private contract: ethers.Contract | null = null;
+  private contract: GNUSDAODiamond | null = null;
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
   private chainId: number | null = null;
@@ -44,12 +49,13 @@ export class GNUSDAOService {
         return false;
       }
 
-      // Create contract instance
-      this.contract = new ethers.Contract(
+      // Create contract instance using TypeChain factory
+      // We use GovernanceFacet factory to connect to the Diamond contract
+      // The Diamond pattern allows us to call all facet functions through the same address
+      this.contract = GNUSDAOGovernanceFacet__factory.connect(
         contractConfig.address,
-        GNUS_DAO_DIAMOND_ABI,
         signer || provider,
-      );
+      ) as unknown as GNUSDAODiamond;
 
       return true;
     } catch (error) {
@@ -82,12 +88,16 @@ export class GNUSDAOService {
   // Diamond Loupe Functions
   /**
    * Get all facets and their function selectors
+   * Note: This requires DiamondLoupeFacet to be included in the Diamond
    */
   async getFacets(): Promise<Facet[]> {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      const facets = await this.contract.facets?.();
+      // The facets() function is part of DiamondLoupeFacet
+      // We need to call it through the contract interface
+      const contractWithLoupe = this.contract as any;
+      const facets = await contractWithLoupe.facets?.();
       if (!facets) return [];
       return facets.map((facet: any) => ({
         facetAddress: facet.facetAddress,
@@ -95,7 +105,8 @@ export class GNUSDAOService {
       }));
     } catch (error) {
       logger.error("Error getting facets:", error as any);
-      throw error;
+      // Return empty array if facets() is not available
+      return [];
     }
   }
 
@@ -126,13 +137,14 @@ export class GNUSDAOService {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      const [name, symbol, decimals, totalSupply] = await Promise.all([
-        this.contract.name?.() || "GNUS Token",
-        this.contract.symbol?.() || "GNUS",
-        this.contract.decimals?.() || 18,
-        this.contract.totalSupply?.() || 0n,
+      const [name, symbol, decimalsResult, totalSupply] = await Promise.all([
+        this.contract.name() || "GNUS Token",
+        this.contract.symbol() || "GNUS",
+        this.contract.decimals() || 18n,
+        this.contract.totalSupply() || 0n,
       ]);
 
+      const decimals = Number(decimalsResult);
       return { name, symbol, decimals, totalSupply };
     } catch (error) {
       console.error("Error getting token info:", error);
@@ -161,7 +173,7 @@ export class GNUSDAOService {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      return (await this.contract.getCurrentVotes?.(address)) || 0n;
+      return (await this.contract.getVotingPower(address)) || 0n;
     } catch (error) {
       console.error("Error getting voting power:", error);
       return 0n;
@@ -179,10 +191,102 @@ export class GNUSDAOService {
     }
 
     try {
-      return await this.contract.delegate?.(delegatee);
+      return await this.contract.delegateVotes(delegatee);
     } catch (error) {
       console.error("Error delegating votes:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if user has delegated voting power to themselves
+   * NOTE: This contract PREVENTS self-delegation (CannotDelegateToSelf error)
+   * Voting power comes directly from token balance, not delegation
+   * Returns true if user has NOT delegated (meaning they have their own voting power)
+   */
+  async isDelegatedToSelf(address: string): Promise<boolean> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      const delegatedTo = await this.getDelegatedTo(address);
+
+      // If not delegated to anyone (ZeroAddress), user has their own voting power
+      // If delegated to someone else, they've given away their voting power
+      return delegatedTo === ethers.ZeroAddress;
+    } catch (error) {
+      console.error("Error checking delegation status:", error);
+      // Default to true - assume user has their own voting power
+      return true;
+    }
+  }
+
+  /**
+   * Delegate voting power to self (activate voting power)
+   * NOTE: This contract does NOT support self-delegation
+   * This method is kept for API compatibility but will throw an error
+   */
+  async delegateToSelf(address: string): Promise<ethers.ContractTransactionResponse> {
+    throw new Error(
+      "This contract does not support self-delegation. Voting power comes directly from your token balance. " +
+      "You already have voting power if you hold GNUS tokens."
+    );
+  }
+
+  /**
+   * Get the address that an account has delegated to
+   */
+  async getDelegatedTo(account: string): Promise<string> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.getDelegatedTo(account);
+    } catch (error) {
+      console.error("Error getting delegated to:", error);
+      return ethers.ZeroAddress;
+    }
+  }
+
+  /**
+   * Get the total delegated votes for an account
+   */
+  async getDelegatedVotes(account: string): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.getDelegatedVotes(account);
+    } catch (error) {
+      console.error("Error getting delegated votes:", error);
+      return 0n;
+    }
+  }
+
+  /**
+   * Revoke delegation and return voting power to self
+   */
+  async revokeDelegation(): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.revokeDelegation();
+    } catch (error) {
+      console.error("Error revoking delegation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get past voting power at a specific block
+   */
+  async getPastVotingPower(account: string, blockNumber: bigint): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.getPastVotingPower(account, blockNumber);
+    } catch (error) {
+      console.error("Error getting past voting power:", error);
+      return 0n;
     }
   }
 
@@ -251,6 +355,7 @@ export class GNUSDAOService {
 
   /**
    * Get proposal state (calculated from status data)
+   * Uses the contract's checkQuorum function for accurate quorum checking
    */
   async getProposalState(proposalId: bigint): Promise<ProposalState> {
     if (!this.contract) throw new Error("Service not initialized");
@@ -265,20 +370,75 @@ export class GNUSDAOService {
       const endTime = Number(status.endTime);
       const executed = status.executed;
       const cancelled = status.cancelled;
+      const totalVotes = BigInt(status.totalVotes);
 
       // Calculate state based on status
-      if (cancelled) return ProposalState.Canceled;
+      // Priority order: Executed > Canceled > Pending > Active > Succeeded/Defeated
+
+      // Check if executed or cancelled first
       if (executed) return ProposalState.Executed;
+      if (cancelled) return ProposalState.Canceled;
+
+      // Check if voting hasn't started yet
       if (currentTime < startTime) return ProposalState.Pending;
-      if (currentTime >= startTime && currentTime < endTime)
+
+      // Check if voting is active
+      if (currentTime >= startTime && currentTime < endTime) {
         return ProposalState.Active;
+      }
+
+      // Voting has ended - determine if succeeded or defeated
       if (currentTime >= endTime) {
-        // Check if proposal succeeded (has enough votes)
-        const totalVotes = Number(status.totalVotes);
-        const quorum = 1000000; // Example quorum threshold
-        return totalVotes >= quorum
-          ? ProposalState.Succeeded
-          : ProposalState.Defeated;
+        // First check if there are any votes at all
+        if (totalVotes === 0n) {
+          return ProposalState.Defeated;
+        }
+
+        // Use the contract's checkQuorum function for accurate quorum checking
+        try {
+          const votingConfig = await this.getVotingConfig();
+          if (!votingConfig) {
+            console.warn("No voting config found, using simple vote check");
+            // If no config, proposals with votes succeed
+            return totalVotes > 0n ? ProposalState.Succeeded : ProposalState.Defeated;
+          }
+
+          // Try to use the VotingMechanismsFacet's checkQuorum function
+          try {
+            const meetsQuorum = await this.contract.checkQuorum(
+              totalVotes,
+              votingConfig.quorumThreshold
+            );
+
+            console.log(`Proposal ${proposalId} quorum check:`, {
+              totalVotes: totalVotes.toString(),
+              quorumThreshold: votingConfig.quorumThreshold.toString(),
+              meetsQuorum
+            });
+
+            return meetsQuorum ? ProposalState.Succeeded : ProposalState.Defeated;
+          } catch (quorumError) {
+            console.warn("checkQuorum function not available, using manual calculation:", quorumError);
+
+            // Manual quorum calculation as fallback
+            // quorumThreshold is typically a percentage (e.g., 4 = 4%)
+            // We need to check if totalVotes meets the threshold
+            const meetsQuorum = totalVotes >= votingConfig.quorumThreshold;
+
+            console.log(`Manual quorum check for proposal ${proposalId}:`, {
+              totalVotes: totalVotes.toString(),
+              quorumThreshold: votingConfig.quorumThreshold.toString(),
+              meetsQuorum
+            });
+
+            return meetsQuorum ? ProposalState.Succeeded : ProposalState.Defeated;
+          }
+        } catch (error) {
+          console.error("Error checking quorum:", error);
+          // Fallback: if we can't check quorum, use simple logic
+          // Proposals with 0 votes are defeated
+          return totalVotes > 0n ? ProposalState.Succeeded : ProposalState.Defeated;
+        }
       }
 
       return ProposalState.Pending;
@@ -300,7 +460,10 @@ export class GNUSDAOService {
     }
 
     try {
-      return await this.contract.propose?.(title, ipfsHash);
+      if (!this.contract.propose) {
+        throw new Error("propose function not available on contract");
+      }
+      return await this.contract.propose(title, ipfsHash);
     } catch (error) {
       logger.error("Error creating proposal:", error as any);
       throw error;
@@ -370,21 +533,52 @@ export class GNUSDAOService {
   }
 
   /**
-   * Cast a vote on a proposal (using the deployed contract's simple vote function)
+   * Cast a vote on a proposal using quadratic voting
+   * The contract uses quadratic voting where cost = votes^2
+   * Note: The deployed contract only supports FOR votes
    */
   async castVote(
     proposalId: bigint,
     support: VoteSupport,
-    reason?: string,
+    votes: bigint = 1n,
   ): Promise<ethers.ContractTransactionResponse> {
     if (!this.contract || !this.signer) {
       throw new Error("Service not initialized or no signer available");
     }
 
     try {
-      // The deployed contract has: vote(uint256 proposalId, uint256 votes)
-      // We'll use 1 vote for "For" and 0 votes for "Against"
-      const votesToCast = support === VoteSupport.For ? 1n : 0n;
+      // The deployed contract signature: vote(uint256 proposalId, uint256 votes)
+      // It only supports FOR votes - there's no support parameter
+      if (support !== VoteSupport.For) {
+        throw new Error("This contract only supports FOR votes. Against and Abstain are not implemented.");
+      }
+
+      // Ensure votes is at least 1
+      const votesToCast = votes > 0n ? votes : 1n;
+
+      // Get voter's address
+      const voterAddress = await this.signer.getAddress();
+
+      // Validate the vote before casting
+      const votingConfig = await this.getVotingConfig();
+      const tokenBalance = await this.getTokenBalance(voterAddress);
+
+      if (votingConfig) {
+        const validation = await this.validateVote(
+          votesToCast,
+          votingConfig.maxVotesPerWallet,
+          tokenBalance
+        );
+
+        if (!validation.valid) {
+          const cost = await this.calculateQuadraticCost(votesToCast);
+          throw new Error(
+            `Invalid vote: You need ${cost} tokens to cast ${votesToCast} votes, but you only have ${tokenBalance} tokens.`
+          );
+        }
+      }
+
+      // Cast the vote
       return await this.contract.vote?.(proposalId, votesToCast);
     } catch (error) {
       logger.error("Error casting vote:", error as any);
@@ -403,8 +597,7 @@ export class GNUSDAOService {
 
     try {
       // Use hasVoted function and getVote function from the deployed contract
-      const hasVoted =
-        (await this.contract.hasVoted?.(proposalId, voter)) || false;
+      const hasVoted = await this.contract.hasVoted(proposalId, voter);
 
       if (!hasVoted) {
         return {
@@ -415,7 +608,7 @@ export class GNUSDAOService {
       }
 
       // Try to get vote details
-      const voteData = await this.contract.getVote?.(proposalId, voter);
+      const voteData = await this.contract.getVote(proposalId, voter);
       const votes = voteData || 0n;
 
       return {
@@ -429,57 +622,161 @@ export class GNUSDAOService {
     }
   }
 
-  // Quadratic Voting Functions
   /**
-   * Get vote credits for an address
+   * Execute a proposal that has succeeded
    */
-  async getVoteCredits(address: string): Promise<bigint> {
-    if (!this.contract) throw new Error("Service not initialized");
-
-    try {
-      return (await this.contract.getVoteCredits?.(address)) || 0n;
-    } catch (error) {
-      console.error("Error getting vote credits:", error);
-      return 0n;
-    }
-  }
-
-  /**
-   * Calculate quadratic vote weight from credits
-   */
-  async getQuadraticVoteWeight(voteCredits: bigint): Promise<bigint> {
-    if (!this.contract) throw new Error("Service not initialized");
-
-    try {
-      return (await this.contract.getQuadraticVoteWeight?.(voteCredits)) || 0n;
-    } catch (error) {
-      console.error("Error calculating quadratic vote weight:", error);
-      // Fallback calculation: sqrt(credits)
-      return BigInt(Math.floor(Math.sqrt(Number(voteCredits))));
-    }
-  }
-
-  /**
-   * Cast a quadratic vote
-   */
-  async castQuadraticVote(
-    proposalId: bigint,
-    support: VoteSupport,
-    voteCredits: bigint,
-  ): Promise<ethers.ContractTransactionResponse> {
+  async executeProposal(proposalId: bigint): Promise<ethers.ContractTransactionResponse> {
     if (!this.contract || !this.signer) {
       throw new Error("Service not initialized or no signer available");
     }
 
     try {
-      return await this.contract.castQuadraticVote?.(
-        proposalId,
-        support,
-        voteCredits,
-      );
+      return await this.contract.executeProposal(proposalId);
     } catch (error) {
-      console.error("Error casting quadratic vote:", error);
+      logger.error("Error executing proposal:", error as any);
       throw error;
+    }
+  }
+
+  /**
+   * Cancel a proposal (only proposer or admin can cancel)
+   */
+  async cancelProposal(proposalId: bigint): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.cancelProposal(proposalId);
+    } catch (error) {
+      logger.error("Error canceling proposal:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Get proposal status (basic info)
+   */
+  async getProposalStatus(proposalId: bigint): Promise<any> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.getProposalStatus(proposalId);
+    } catch (error) {
+      console.error("Error getting proposal status:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate a vote before casting
+   */
+  async validateVote(
+    votes: bigint,
+    maxVotesPerWallet: bigint,
+    tokenBalance: bigint
+  ): Promise<{ valid: boolean; cost: bigint }> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      const result = await this.contract.validateVote(votes, maxVotesPerWallet, tokenBalance);
+      return {
+        valid: result.valid,
+        cost: result.cost,
+      };
+    } catch (error) {
+      console.error("Error validating vote:", error);
+      return { valid: false, cost: 0n };
+    }
+  }
+
+  // Quadratic Voting Functions
+  /**
+   * Calculate quadratic cost for a number of votes
+   */
+  async calculateQuadraticCost(votes: bigint): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.calculateQuadraticCost(votes);
+    } catch (error) {
+      console.error("Error calculating quadratic cost:", error);
+      // Fallback calculation: votes^2
+      return votes * votes;
+    }
+  }
+
+  /**
+   * Calculate vote weight from token cost
+   */
+  async calculateVoteWeight(tokensCost: bigint): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.calculateVoteWeight(tokensCost);
+    } catch (error) {
+      console.error("Error calculating vote weight:", error);
+      // Fallback calculation: sqrt(cost)
+      return BigInt(Math.floor(Math.sqrt(Number(tokensCost))));
+    }
+  }
+
+  /**
+   * Calculate maximum votes possible with given token balance
+   */
+  async calculateMaxVotes(tokenBalance: bigint): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.calculateMaxVotes(tokenBalance);
+    } catch (error) {
+      console.error("Error calculating max votes:", error);
+      // Fallback calculation: sqrt(balance)
+      return BigInt(Math.floor(Math.sqrt(Number(tokenBalance))));
+    }
+  }
+
+  /**
+   * Calculate optimal number of votes for a given token budget
+   */
+  async calculateOptimalVotes(
+    tokenBudget: bigint,
+    maxVotesPerWallet: bigint
+  ): Promise<{ optimalVotes: bigint; remainingTokens: bigint }> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      const result = await this.contract.calculateOptimalVotes(tokenBudget, maxVotesPerWallet);
+      return {
+        optimalVotes: result.optimalVotes,
+        remainingTokens: result.remainingTokens,
+      };
+    } catch (error) {
+      console.error("Error calculating optimal votes:", error);
+      // Fallback: calculate sqrt of budget, capped at max
+      const optimal = BigInt(Math.floor(Math.sqrt(Number(tokenBudget))));
+      const capped = optimal > maxVotesPerWallet ? maxVotesPerWallet : optimal;
+      const cost = capped * capped;
+      return {
+        optimalVotes: capped,
+        remainingTokens: tokenBudget - cost,
+      };
+    }
+  }
+
+  /**
+   * Get vote efficiency (votes per token spent)
+   */
+  async getVoteEfficiency(votes: bigint, tokensCost: bigint): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.getVoteEfficiency(votes, tokensCost);
+    } catch (error) {
+      console.error("Error getting vote efficiency:", error);
+      // Fallback: efficiency = votes / cost (scaled by 100 for percentage)
+      if (tokensCost === 0n) return 0n;
+      return (votes * 100n) / tokensCost;
     }
   }
 
@@ -491,7 +788,7 @@ export class GNUSDAOService {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      return (await this.contract.treasuryBalance?.()) || 0n;
+      return await this.contract.getTreasuryBalance();
     } catch (error) {
       console.error("Error getting treasury balance:", error);
       return 0n;
@@ -499,18 +796,216 @@ export class GNUSDAOService {
   }
 
   /**
-   * Get treasury token balance
+   * Check if an address is a treasury manager
    */
-  async getTreasuryTokenBalance(tokenAddress: string): Promise<bigint> {
+  async isTreasuryManager(address: string): Promise<boolean> {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      return (await this.contract.treasuryTokenBalance?.(tokenAddress)) || 0n;
+      return await this.contract.isTreasuryManager(address);
     } catch (error) {
-      console.error("Error getting treasury token balance:", error);
+      console.error("Error checking treasury manager status:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Add a treasury manager (requires owner role)
+   */
+  async addTreasuryManager(manager: string): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.addTreasuryManager(manager);
+    } catch (error) {
+      logger.error("Error adding treasury manager:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a treasury manager (requires owner role)
+   */
+  async removeTreasuryManager(manager: string): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.removeTreasuryManager(manager);
+    } catch (error) {
+      logger.error("Error removing treasury manager:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Withdraw from treasury (requires treasury manager role)
+   */
+  async withdrawFromTreasury(
+    to: string,
+    amount: bigint,
+  ): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      // Check if signer is a treasury manager
+      const signerAddress = await this.signer.getAddress();
+      const isManager = await this.isTreasuryManager(signerAddress);
+
+      if (!isManager) {
+        throw new Error("Only treasury managers can withdraw from treasury");
+      }
+
+      return await this.contract.withdrawFromTreasury(to, amount);
+    } catch (error) {
+      logger.error("Error withdrawing from treasury:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Deposit to treasury
+   */
+  async depositToTreasury(
+    value: bigint,
+  ): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.depositToTreasury({ value });
+    } catch (error) {
+      logger.error("Error depositing to treasury:", error as any);
+      throw error;
+    }
+  }
+
+  // Token Functions
+  /**
+   * Transfer tokens to another address
+   */
+  async transfer(to: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.transfer(to, amount);
+    } catch (error) {
+      logger.error("Error transferring tokens:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve spender to use tokens
+   */
+  async approve(spender: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.approve(spender, amount);
+    } catch (error) {
+      logger.error("Error approving tokens:", error as any);
+      throw error;
+    }
+  }
+
+  /**
+   * Get allowance for a spender
+   */
+  async allowance(owner: string, spender: string): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.allowance(owner, spender);
+    } catch (error) {
+      console.error("Error getting allowance:", error);
       return 0n;
     }
   }
+
+  /**
+   * Burn tokens
+   */
+  async burn(amount: bigint): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      return await this.contract.burn(amount);
+    } catch (error) {
+      logger.error("Error burning tokens:", error as any);
+      throw error;
+    }
+  }
+
+  // Access Control Functions
+  /**
+   * Check if an account has a specific role
+   */
+  async hasRole(role: string, account: string): Promise<boolean> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.hasRole(role, account);
+    } catch (error) {
+      console.error("Error checking role:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if account is a minter
+   */
+  async isMinter(account: string): Promise<boolean> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.isMinter(account);
+    } catch (error) {
+      console.error("Error checking minter:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get contract owner
+   */
+  async getOwner(): Promise<string> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.owner();
+    } catch (error) {
+      console.error("Error getting owner:", error);
+      return ethers.ZeroAddress;
+    }
+  }
+
+  /**
+   * Check if contract is paused
+   */
+  async isPaused(): Promise<boolean> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      return await this.contract.paused();
+    } catch (error) {
+      console.error("Error checking paused status:", error);
+      return false;
+    }
+  }
+
 
   // Governance Configuration
   /**
@@ -525,18 +1020,73 @@ export class GNUSDAOService {
     if (!this.contract) throw new Error("Service not initialized");
 
     try {
-      const [votingDelay, votingPeriod, proposalThreshold, quorumVotes] =
-        await Promise.all([
-          this.contract.votingDelay?.() || 0n,
-          this.contract.votingPeriod?.() || 0n,
-          this.contract.proposalThreshold?.() || 0n,
-          this.contract.quorumVotes?.() || 0n,
-        ]);
+      const config = await this.contract.getVotingConfig();
 
-      return { votingDelay, votingPeriod, proposalThreshold, quorumVotes };
+      return {
+        votingDelay: config.votingDelay,
+        votingPeriod: config.votingPeriod,
+        proposalThreshold: config.proposalThreshold,
+        quorumVotes: config.quorumThreshold,
+      };
     } catch (error) {
       console.error("Error getting governance config:", error);
       return null;
+    }
+  }
+
+  /**
+   * Get governance parameters (alias for getGovernanceConfig)
+   */
+  async getGovernanceParams(): Promise<{
+    votingDelay: bigint;
+    votingPeriod: bigint;
+    proposalThreshold: bigint;
+    quorumVotes: bigint;
+  } | null> {
+    return this.getGovernanceConfig();
+  }
+
+  /**
+   * Get vote credits for an address
+   * Note: This is calculated from token balance and voting power
+   */
+  async getVoteCredits(address: string): Promise<bigint> {
+    if (!this.contract) throw new Error("Service not initialized");
+
+    try {
+      // Vote credits are based on voting power
+      const votingPower = await this.getVotingPower(address);
+      return votingPower;
+    } catch (error) {
+      console.error("Error getting vote credits:", error);
+      return 0n;
+    }
+  }
+
+  /**
+   * Propose a treasury action
+   * Note: This creates a proposal for treasury operations
+   */
+  async proposeTreasuryAction(
+    recipient: string,
+    amount: bigint,
+    calldata: string,
+    description: string,
+  ): Promise<ethers.ContractTransactionResponse> {
+    if (!this.contract || !this.signer) {
+      throw new Error("Service not initialized or no signer available");
+    }
+
+    try {
+      // Create a proposal with treasury action details
+      const title = `Treasury Action: ${ethers.formatEther(amount)} ETH to ${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
+      const fullDescription = `${description}\n\nRecipient: ${recipient}\nAmount: ${ethers.formatEther(amount)} ETH\nCalldata: ${calldata}`;
+
+      // Use createProposal to create a treasury action proposal
+      return await this.createProposal(title, fullDescription);
+    } catch (error) {
+      console.error("Error proposing treasury action:", error);
+      throw error;
     }
   }
 
@@ -544,27 +1094,29 @@ export class GNUSDAOService {
   /**
    * Listen for proposal created events
    */
-  onProposalCreated(callback: (event: any) => void): void {
+  async onProposalCreated(callback: (event: any) => void): Promise<void> {
     if (!this.contract) throw new Error("Service not initialized");
 
-    this.contract.on?.("ProposalCreated", callback);
+    const filter = this.contract.filters.ProposalCreated();
+    await this.contract.on(filter, callback);
   }
 
   /**
    * Listen for vote cast events
    */
-  onVoteCast(callback: (event: any) => void): void {
+  async onVoteCast(callback: (event: any) => void): Promise<void> {
     if (!this.contract) throw new Error("Service not initialized");
 
-    this.contract.on?.("VoteCast", callback);
+    const filter = this.contract.filters.VoteCast();
+    await this.contract.on(filter, callback);
   }
 
   /**
    * Remove all event listeners
    */
-  removeAllListeners(): void {
+  async removeAllListeners(): Promise<void> {
     if (this.contract) {
-      this.contract.removeAllListeners?.();
+      await this.contract.removeAllListeners();
     }
   }
 }

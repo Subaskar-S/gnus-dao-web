@@ -19,6 +19,7 @@ import { gnusDaoService } from "@/lib/contracts/gnusDaoService";
 import { ProposalState, VoteSupport } from "@/lib/contracts/gnusDao";
 import type { Proposal } from "@/lib/contracts/gnusDao";
 import { CreateProposalModal } from "@/components/proposals/CreateProposalModal";
+import { DelegationBanner } from "@/components/governance/DelegationBanner";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 
@@ -202,7 +203,21 @@ export default function ProposalsPage() {
 
       // Calculate metadata
       const totalVotes = proposal.totalVotes || 0n;
-      const quorumReached = totalVotes >= 1000000n; // Example quorum of 1M tokens
+
+      // Get actual quorum threshold from voting config
+      const quorumThreshold = votingConfig?.quorumThreshold
+        ? BigInt(votingConfig.quorumThreshold)
+        : 0n;
+
+      // Only mark quorum as reached if:
+      // 1. There are actual votes (totalVotes > 0)
+      // 2. The votes meet or exceed the threshold
+      // 3. The proposal is not in Pending state (voting has started)
+      const quorumReached =
+        totalVotes > 0n &&
+        totalVotes >= quorumThreshold &&
+        state !== ProposalState.Pending;
+
       const timeRemaining =
         proposal.endTime > 0n
           ? calculateTimeRemaining(proposal.endTime, state)
@@ -315,6 +330,9 @@ export default function ProposalsPage() {
   return (
     <AuthGuard requireAuth={false}>
       <div className="container mx-auto px-4 py-8">
+        {/* Delegation Banner */}
+        <DelegationBanner />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
@@ -560,6 +578,7 @@ function ProposalCard({ proposal, router }: ProposalCardProps) {
             <h3 className="text-lg font-semibold">{proposal.title}</h3>
             <span
               className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(proposal.state)}`}
+              data-testid="proposal-state"
             >
               {getStateName(proposal.state)}
             </span>
@@ -597,6 +616,9 @@ function ProposalCard({ proposal, router }: ProposalCardProps) {
           <span>For: {proposal.forVotes.toString()}</span>
           <span>Against: {proposal.againstVotes.toString()}</span>
           <span>Abstain: {proposal.abstainVotes.toString()}</span>
+          <span data-testid="total-votes" className="hidden">
+            {proposal.totalVotes.toString()}
+          </span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
           <div

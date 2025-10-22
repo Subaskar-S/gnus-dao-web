@@ -98,7 +98,7 @@ export function AuthButton({
           <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             <span className="text-sm text-red-700 dark:text-red-300">
-              Authentication required
+              ⚠️
             </span>
           </div>
         )}
@@ -110,7 +110,7 @@ export function AuthButton({
           className={`flex items-center gap-2 ${className || ""}`}
         >
           <Shield className="h-4 w-4" />
-          {isAuthenticating ? "Authenticating..." : "Sign In with Ethereum"}
+          {isAuthenticating ? "Authenticating..." : "SIWE"}
         </Button>
       </div>
     );
@@ -162,7 +162,7 @@ export function AuthStatus({ compact = false, className }: AuthStatusProps) {
       <div className={`flex items-center gap-2 ${className}`}>
         <div className="h-2 w-2 bg-yellow-500 rounded-full animate-pulse" />
         <span className="text-sm text-yellow-700 dark:text-yellow-300">
-          Authentication required
+          ⚠️
         </span>
       </div>
     );
@@ -217,7 +217,7 @@ export function AuthGuard({
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <Shield className="h-12 w-12 text-yellow-500 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Authentication Required
+            ⚠️
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Please sign in with Ethereum to access governance features.

@@ -3,7 +3,8 @@
 import React, { useState, useRef } from 'react'
 import { Upload, X, File, Image, FileText, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { ipfsService, validateFile, formatFileSize, type IPFSUploadResult } from '@/lib/ipfs'
+import { SecureIPFSService } from '@/lib/ipfs/secureUpload'
+import { validateFile, formatFileSize, type IPFSUploadResult } from '@/lib/ipfs'
 import { toast } from 'react-hot-toast'
 
 interface FileUploadProps {
@@ -87,31 +88,32 @@ export function FileUpload({
         if (!file) continue
 
         try {
-          const result = await ipfsService.uploadFile(file, {
-            pin: true,
-            metadata: {
-              name: file.name,
-              keyvalues: {
-                uploadedAt: new Date().toISOString(),
-                size: file.size.toString(),
-                type: file.type
-              }
-            },
-            onProgress: (progress) => {
-              setUploadingFiles(prev => prev.map((uf, index) => 
-                index === i ? { ...uf, progress } : uf
-              ))
-              
-              // Calculate overall progress
-              const overallProgress = ((i * 100) + progress) / files.length
-              onUploadProgress?.(overallProgress)
+          // Upload using secure IPFS service
+          const uploadResult = await SecureIPFSService.uploadFile(file, {
+            name: file.name,
+            keyvalues: {
+              uploadedAt: new Date().toISOString(),
+              size: file.size.toString(),
+              type: file.type
             }
           })
 
+          if (!uploadResult.success) {
+            throw new Error(uploadResult.error || 'Upload failed')
+          }
+
+          // Convert to IPFSUploadResult format
+          const result: IPFSUploadResult = {
+            hash: uploadResult.ipfsHash || '',
+            name: file.name,
+            size: uploadResult.pinSize || file.size,
+            url: SecureIPFSService.getGatewayUrl(uploadResult.ipfsHash || '')
+          }
+
           results.push(result)
-          
+
           // Update file status to complete
-          setUploadingFiles(prev => prev.map((uf, index) => 
+          setUploadingFiles(prev => prev.map((uf, index) =>
             index === i ? { ...uf, status: 'complete', result, progress: 100 } : uf
           ))
           

@@ -4,10 +4,12 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Wallet, ArrowRight } from 'lucide-react'
 import { useWeb3Store } from '@/lib/web3/reduxProvider'
-import { getAvailableConnectors } from '@/lib/web3/connectors'
+import { walletConnectors } from '@/lib/web3/connectors'
 import { LazyWalletSelectionModal } from './LazyWalletSelectionModal'
 import { WalletConfigError } from '@/components/error/WalletConfigError'
 import { WalletConnector } from '@/lib/web3/types'
+import { useToast } from '@/hooks/useToast'
+import { ToastContainer } from '@/components/ui/Toast'
 
 interface ConnectWalletButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
@@ -28,7 +30,9 @@ export function ConnectWalletButton({
   const [connectingWallet, setConnectingWallet] = useState<string>()
   const [configError, setConfigError] = useState<string | null>(null)
   const { wallet, connect } = useWeb3Store()
-  const connectors = getAvailableConnectors()
+  // Show all connectors, not just available ones - let users install if needed
+  const connectors = walletConnectors
+  const toast = useToast()
 
   const handleOpenModal = () => {
     setIsModalOpen(true)
@@ -44,11 +48,29 @@ export function ConnectWalletButton({
     setConfigError(null)
 
     try {
+      // For WalletConnect, close modal BEFORE connecting to allow Reown AppKit modal to show
+      if (connector.id === 'walletconnect') {
+        // Close immediately and add small delay to ensure modal is fully closed
+        handleCloseModal()
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
       await connect(connector.id)
       if (process.env.NODE_ENV === 'development') {
         console.log(`Connected to ${connector.name}`)
       }
-      handleCloseModal()
+
+      // Show success toast for all connections
+      toast.success(
+        'Wallet Connected!',
+        `Successfully connected to ${connector.name}`,
+        6000
+      )
+
+      // Close modal for non-WalletConnect wallets (WalletConnect already closed)
+      if (connector.id !== 'walletconnect') {
+        handleCloseModal()
+      }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Wallet connection failed:', error)
@@ -60,6 +82,12 @@ export function ConnectWalletButton({
         setConfigError(message)
         handleCloseModal()
       } else {
+        // Show error toast for user feedback
+        toast.error(
+          'Connection Failed',
+          message,
+          5000
+        )
         // Only log non-config errors in development
         if (process.env.NODE_ENV === 'development') {
           console.error(message)
@@ -111,6 +139,8 @@ export function ConnectWalletButton({
         isConnecting={wallet.isConnecting}
         connectingWallet={connectingWallet}
       />
+
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </>
   )
 }

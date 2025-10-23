@@ -1,9 +1,6 @@
 # Enhanced Cloudflare Pages redirects for GNUS DAO SPA routing
 # Comprehensive routing for Next.js static export with SEO optimization
 
-# API routes redirect (for future API endpoints)
-/api/* /api/index.html 200
-
 # Legacy governance route redirects (SEO-friendly)
 /governance /proposals 301
 /vote /proposals 301
@@ -15,25 +12,22 @@
 /proposal/:id /proposals/:id 301
 
 # Proposal detail pages (SPA routing)
-/proposals/* /proposals/index.html 200
+/proposals/* /index.html 200
 
 # Treasury routes (SPA routing)
-/treasury/* /treasury 200
+/treasury/* /index.html 200
 
 # Analytics routes (SPA routing)
-/analytics/* /analytics 200
+/analytics/* /index.html 200
 
 # History routes (SPA routing)
-/history/* /history 200
+/history/* /index.html 200
 
 # Settings routes (SPA routing)
-/settings/* /settings 200
+/settings/* /index.html 200
 
 # Documentation routes (SPA routing)
-/docs/* /docs 200
-
-# IPFS gateway routes (handled by worker)
-/ipfs/* /ipfs/:splat 200
+/docs/* /index.html 200
 
 # Health check endpoint
 /health /index.html 200

@@ -3,7 +3,7 @@
 
 /*
   # Core Security Headers
-  X-Frame-Options: DENY
+  X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block
   Referrer-Policy: strict-origin-when-cross-origin
@@ -13,15 +13,20 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=()
 
   # Comprehensive Content Security Policy for Web3 applications
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com https://verify.walletconnect.org https://registry.walletconnect.com https://explorer-api.walletconnect.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org https://secure.walletconnect.com https://secure.walletconnect.org; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+  # Allows blockchain RPC connections, WalletConnect, IPFS, and other Web3 services
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://verify.walletconnect.com https://verify.walletconnect.org https://registry.walletconnect.com https://explorer-api.walletconnect.com https://rpc.walletconnect.com https://rpc.walletconnect.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: blob: https://*.llamarpc.com https://*.base.org https://*.polygon.com https://*.skalenodes.com https://*.infura.io https://*.alchemy.com https://*.cloudflare.com https://*.walletconnect.com https://*.walletconnect.org https://ipfs.io https://gateway.pinata.cloud https://cloudflare-ipfs.com https://dweb.link https://ipfs.infura.io; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org https://secure.walletconnect.com https://secure.walletconnect.org; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
 
   # Performance and Caching Headers
   Cache-Control: public, max-age=3600
   X-DNS-Prefetch-Control: on
 
-  # Web3 and IPFS Compatibility
+  # Web3 and IPFS Compatibility - Allow cross-origin requests for blockchain RPCs
   Cross-Origin-Embedder-Policy: unsafe-none
   Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Resource-Policy: cross-origin
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
 
 # Static assets caching
 /assets/*
